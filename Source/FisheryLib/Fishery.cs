@@ -10,10 +10,12 @@ global using HarmonyLib;
 global using FisheryLib.Utility.Diagnostics;
 global using CodeInstructions = System.Collections.Generic.IEnumerable<HarmonyLib.CodeInstruction>;
 using System.Security;
+using System.Diagnostics;
 
 [assembly: AllowPartiallyTrustedCallers]
 [assembly: SecurityTransparent]
 [assembly: SecurityRules(SecurityRuleSet.Level2, SkipVerificationInFullTrust = true)]
+[assembly: Debuggable(false, false)]
 
 /*namespace FisheryLib;
 public class Fishery : Harmony

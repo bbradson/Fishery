@@ -85,10 +85,10 @@ public static class Equals
 			type.IsValueType
 			? nameof(Methods.EquatableValueType)
 			: nameof(Methods.EquatableReferenceType))
-			.MakeGenericMethod(type)/*.CreateDelegate(typeof(EqualsDelegate<>).MakeGenericType(type)).Method*/.GetFunctionPointer()
+			.MakeGenericMethod(type).GetFunctionPointer()
 		: type.IsNullable(out var genericArgument)
 			&& genericArgument.IsAssignableTo(typeof(IEquatable<>), genericArgument)
-		? GetMethod(nameof(Methods.Nullable)).MakeGenericMethod(genericArgument)/*.CreateDelegate(typeof(EqualsDelegate<>).MakeGenericType(type)).Method*/.GetFunctionPointer()
+		? GetMethod(nameof(Methods.Nullable)).MakeGenericMethod(genericArgument).GetFunctionPointer()
 		: GetMethod(
 			type.IsEnum
 			? Type.GetTypeCode(Enum.GetUnderlyingType(type))
@@ -105,7 +105,7 @@ public static class Equals
 					_ => ThrowHelper.ThrowNotSupportedException<string>()
 				}
 			: nameof(Methods.Object)
-		).MakeGenericMethod(type)/*.CreateDelegate(typeof(EqualsDelegate<>).MakeGenericType(type)).Method*/.GetFunctionPointer();
+		).MakeGenericMethod(type).GetFunctionPointer();
 
 	private static MethodInfo GetMethod(string name)
 		=> Array.Find(_equalsMethods, m => m.Name == name);
@@ -117,6 +117,4 @@ public static class Equals
 			=> m.ReturnType == typeof(bool)
 			&& m.GetParameters().Length == 2)
 		.ToArray();
-
-	//internal delegate bool EqualsDelegate<T>(T x, T y);
 }

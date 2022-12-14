@@ -92,13 +92,10 @@ public static class FishTranspiler
 		public CodeInstruction WithLabelsAndBlocks(CodeInstruction instruction)
 			=> WithLabels(instruction.labels).WithBlocks(instruction.blocks);
 
-		public int GetIndex() => Operand is LocalVariableInfo info ? info.LocalIndex
-			: Operand is ushort ushortVar ? ushortVar
-			: Operand is byte byteVar ? byteVar
-			: Operand is int intVar ? intVar
-			: OpCode.TryGetIndex() is { } index ? index
-			: Operand is IConvertible convertible ? convertible.ToInt32(CultureInfo.InvariantCulture)
-			: Operand as int? ?? ThrowHelper.ThrowArgumentException<int>($"{OpCode} has operand {Operand}. This is not a supported index.");
+		public int GetIndex()
+			=> OpCode.TryGetIndex()
+			?? TryGetIndexFromOperand(Operand)
+			?? ThrowHelper.ThrowArgumentException<int>($"{OpCode} has operand {Operand}. This is not a supported index.");
 
 		public bool LoadsLocalVariable(MethodBase method, Type localType)
 			=> OpCode.LoadsLocalVariable()
@@ -640,6 +637,21 @@ public static class FishTranspiler
 	public static Container StoreLocalVariable(int index) => new(GetStoreLocalOpCode(index), GetOperandFromIndex(index));
 
 	/// <summary>
+	/// Declares a local variable of the specified type, optionally pinning the object referred
+	/// to by the variable. Then returns an instruction matching that of StoreLocalVariable.
+	/// </summary>
+	/// <param name="localType">A System.Type object that represents the type of the local variable</param>
+	/// <param name="generator">The ILGenerator used for the instruction stream</param>
+	/// <param name="pinned">True to pin the object in memory; otherwise, false</param>
+	public static Container NewLocalVariable(Type localType, ILGenerator generator, bool pinned = false)
+	{
+		Guard.IsNotNull(localType);
+		Guard.IsNotNull(generator);
+
+		return StoreLocalVariable(generator.DeclareLocal(localType, pinned));
+	}
+
+	/// <summary>
 	/// Pushes a supplied value of type int32 onto the evaluation stack as an int32.
 	/// </summary>
 	/// <param name="integer">The value to push onto the evaluation stack</param>
@@ -886,6 +898,22 @@ public static class FishTranspiler
 		return new(fieldInfo.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld, fieldInfo);
 	}
 
+	[Obsolete("Use FishTranspiler.PropertyGetter instead")]
+	public static Container CallPropertyGetter(Type type, string name, bool forceNoCallvirt = false)
+		=> PropertyGetter(type, name, forceNoCallvirt);
+
+	[Obsolete("Use FishTranspiler.PropertyGetter instead")]
+	public static Container CallPropertyGetter(PropertyInfo propertyInfo, bool forceNoCallvirt = false)
+		=> PropertyGetter(propertyInfo, forceNoCallvirt);
+
+	[Obsolete("Use FishTranspiler.PropertySetter instead")]
+	public static Container CallPropertySetter(Type type, string name, bool forceNoCallvirt = false)
+		=> PropertySetter(type, name, forceNoCallvirt);
+
+	[Obsolete("Use FishTranspiler.PropertySetter instead")]
+	public static Container CallPropertySetter(PropertyInfo propertyInfo, bool forceNoCallvirt = false)
+		=> PropertySetter(propertyInfo, forceNoCallvirt);
+
 	/// <summary>
 	/// Calls the property getter indicated by the passed arguments.
 	/// </summary>
@@ -893,7 +921,7 @@ public static class FishTranspiler
 	/// <param name="name">The name of the property</param>
 	/// <param name="forceNoCallvirt">force a Call OpCode instead of using Callvirt where appropriate</param>
 	/// <exception cref="ArgumentException">No property found for the specified type and name</exception>
-	public static Container CallPropertyGetter(Type type, string name, bool forceNoCallvirt = false)
+	public static Container PropertyGetter(Type type, string name, bool forceNoCallvirt = false)
 	{
 		Guard.IsNotNull(type);
 		Guard.IsNotNullOrEmpty(name);
@@ -910,7 +938,7 @@ public static class FishTranspiler
 	/// <param name="propertyInfo">The PropertyInfo</param>
 	/// <param name="forceNoCallvirt">force a Call OpCode instead of using Callvirt where appropriate</param>
 	/// <exception cref="ArgumentException">No property getter found for the specified property info</exception>
-	public static Container CallPropertyGetter(PropertyInfo propertyInfo, bool forceNoCallvirt = false)
+	public static Container PropertyGetter(PropertyInfo propertyInfo, bool forceNoCallvirt = false)
 	{
 		Guard.IsNotNull(propertyInfo);
 
@@ -927,7 +955,7 @@ public static class FishTranspiler
 	/// <param name="name">The name of the property</param>
 	/// <param name="forceNoCallvirt">force a Call OpCode instead of using Callvirt where appropriate</param>
 	/// <exception cref="ArgumentException">No property found with specified type and name</exception>
-	public static Container CallPropertySetter(Type type, string name, bool forceNoCallvirt = false)
+	public static Container PropertySetter(Type type, string name, bool forceNoCallvirt = false)
 	{
 		Guard.IsNotNull(type);
 		Guard.IsNotNullOrEmpty(name);
@@ -944,7 +972,7 @@ public static class FishTranspiler
 	/// <param name="propertyInfo">The PropertyInfo</param>
 	/// <param name="forceNoCallvirt">force a Call OpCode instead of using Callvirt where appropriate</param>
 	/// <exception cref="ArgumentException">No property setter found for the specified property info</exception>
-	public static Container CallPropertySetter(PropertyInfo propertyInfo, bool forceNoCallvirt = false)
+	public static Container PropertySetter(PropertyInfo propertyInfo, bool forceNoCallvirt = false)
 	{
 		Guard.IsNotNull(propertyInfo);
 
@@ -1748,12 +1776,9 @@ public static class FishTranspiler
 		{
 			if (previousCode is not null && predicate(previousCode) && code.IsStloc() && code.opcode is var opcode)
 			{
-				yield return opcode.TryGetIndex() as object
-					?? (code.operand is LocalBuilder builder ? builder
-					: code.operand is byte index ? index
-					: code.operand is ushort unsigned ? unsigned
-					: ushort.TryParse(code.operand?.ToString(), out var parsedNumber) ? parsedNumber
-					: ThrowHelper.ThrowNotSupportedException<object>($"{code.opcode} returned {code.operand?.ToString() ?? "null"}."));
+				yield return opcode.TryGetIndex()
+					?? TryGetIndexFromOperand(code.operand)
+					?? ThrowHelper.ThrowNotSupportedException<object>($"{code.opcode} returned {code.operand?.ToString() ?? "null"}.");
 			}
 			previousCode = code;
 		}
@@ -1765,7 +1790,7 @@ public static class FishTranspiler
 		Guard.IsNotNull(predicate);
 
 		foreach (var operand in GetLocalOperandsOrIndices(codes, predicate))
-			yield return operand is LocalBuilder builder ? builder.LocalIndex : (int)operand;
+			yield return (int)operand;
 	}
 
 	public static IEnumerable<int> GetLocalIndices(MethodBase method, Predicate<LocalVariableInfo> predicate)
@@ -2332,8 +2357,21 @@ public static class FishTranspiler
 	public static IList<LocalVariableInfo> GetLocalVariables(this MethodBase method)
 		=> method.GetMethodBody().LocalVariables;
 
+	public static int? TryGetIndexFromOperand(object? obj)
+		=> obj is LocalVariableInfo info ? info.LocalIndex
+		: obj is byte @byte ? @byte
+		: obj is ushort @ushort ? @ushort
+		: obj is int @int ? @int
+		: obj is not string and IConvertible convertible ? convertible.ToInt32(CultureInfo.InvariantCulture)
+		: int.TryParse(obj?.ToString(), out var parsedNumber) ? parsedNumber
+		: null;
+
 	public static bool CompareOperands(object? lhs, object? rhs)
-		=> (lhs is LocalVariableInfo lhInfo ? lhInfo.LocalIndex : lhs) == (rhs is LocalVariableInfo rhInfo ? rhInfo.LocalIndex : rhs);
+		=> TryGetIndexFromOperand(lhs) is int lhIndex && TryGetIndexFromOperand(rhs) is int rhIndex
+		? lhIndex == rhIndex
+		: lhs is null
+		? rhs is null
+		: lhs.Equals(rhs);
 
 	public static void Emit(this ILGenerator generator, Container fishTranspiler)
 	{

@@ -8,7 +8,6 @@
 		<PlatformTarget>AnyCPU</PlatformTarget>
 		<Optimize>true</Optimize>
 		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-		<!--PublicizeAsReferenceAssemblies>false</PublicizeAsReferenceAssemblies-->
 		<Authors>bradson</Authors>
 		<Copyright>Copyright (c) 2022 bradson</Copyright>
 		<PackageLicenseFile>LICENSE</PackageLicenseFile>
