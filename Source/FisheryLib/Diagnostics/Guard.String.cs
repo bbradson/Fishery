@@ -22,9 +22,7 @@ public partial class Guard
 	public static void IsNullOrEmpty(string? text, [CallerArgumentExpression("text")] string name = "")
 	{
 		if (string.IsNullOrEmpty(text))
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsNullOrEmpty(text, name);
 	}
@@ -40,9 +38,7 @@ public partial class Guard
 	public static void IsNotNullOrEmpty([NotNull] string? text, [CallerArgumentExpression("text")] string name = "")
 	{
 		if (!string.IsNullOrEmpty(text))
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsNotNullOrEmpty(text, name);
 	}
@@ -57,9 +53,7 @@ public partial class Guard
 	public static void IsNullOrWhiteSpace(string? text, [CallerArgumentExpression("text")] string name = "")
 	{
 		if (string.IsNullOrWhiteSpace(text))
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsNullOrWhiteSpace(text, name);
 	}
@@ -72,12 +66,11 @@ public partial class Guard
 	/// <exception cref="ArgumentNullException">Thrown if <paramref name="text"/> is <see langword="null"/>.</exception>
 	/// <exception cref="ArgumentException">Thrown if <paramref name="text"/> is whitespace.</exception>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void IsNotNullOrWhiteSpace([NotNull] string? text, [CallerArgumentExpression("text")] string name = "")
+	public static void IsNotNullOrWhiteSpace([NotNull] string? text,
+		[CallerArgumentExpression("text")] string name = "")
 	{
 		if (!string.IsNullOrWhiteSpace(text))
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsNotNullOrWhiteSpace(text, name);
 	}
@@ -92,9 +85,7 @@ public partial class Guard
 	public static void IsEmpty(string text, [CallerArgumentExpression("text")] string name = "")
 	{
 		if (text.Length == 0)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsEmpty(text, name);
 	}
@@ -109,9 +100,7 @@ public partial class Guard
 	public static void IsNotEmpty(string text, [CallerArgumentExpression("text")] string name = "")
 	{
 		if (text.Length != 0)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsNotEmpty(name);
 	}
@@ -126,9 +115,7 @@ public partial class Guard
 	public static void IsWhiteSpace(string text, [CallerArgumentExpression("text")] string name = "")
 	{
 		if (string.IsNullOrWhiteSpace(text))
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsWhiteSpace(text, name);
 	}
@@ -143,9 +130,7 @@ public partial class Guard
 	public static void IsNotWhiteSpace(string text, [CallerArgumentExpression("text")] string name = "")
 	{
 		if (!string.IsNullOrWhiteSpace(text))
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsNotWhiteSpace(text, name);
 	}
@@ -161,9 +146,7 @@ public partial class Guard
 	public static void HasSizeEqualTo(string text, int size, [CallerArgumentExpression("text")] string name = "")
 	{
 		if (text.Length == size)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForHasSizeEqualTo(text, size, name);
 	}
@@ -179,9 +162,7 @@ public partial class Guard
 	public static void HasSizeNotEqualTo(string text, int size, [CallerArgumentExpression("text")] string name = "")
 	{
 		if (text.Length != size)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForHasSizeNotEqualTo(text, size, name);
 	}
@@ -197,9 +178,7 @@ public partial class Guard
 	public static void HasSizeGreaterThan(string text, int size, [CallerArgumentExpression("text")] string name = "")
 	{
 		if (text.Length > size)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForHasSizeGreaterThan(text, size, name);
 	}
@@ -212,12 +191,11 @@ public partial class Guard
 	/// <param name="name">The name of the input parameter being tested.</param>
 	/// <exception cref="ArgumentException">Thrown if the size of <paramref name="text"/> is &lt; <paramref name="size"/>.</exception>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void HasSizeGreaterThanOrEqualTo(string text, int size, [CallerArgumentExpression("text")] string name = "")
+	public static void HasSizeGreaterThanOrEqualTo(string text, int size,
+		[CallerArgumentExpression("text")] string name = "")
 	{
 		if (text.Length >= size)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForHasSizeGreaterThanOrEqualTo(text, size, name);
 	}
@@ -233,9 +211,7 @@ public partial class Guard
 	public static void HasSizeLessThan(string text, int size, [CallerArgumentExpression("text")] string name = "")
 	{
 		if (text.Length < size)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForHasSizeLessThan(text, size, name);
 	}
@@ -248,12 +224,11 @@ public partial class Guard
 	/// <param name="name">The name of the input parameter being tested.</param>
 	/// <exception cref="ArgumentException">Thrown if the size of <paramref name="text"/> is > <paramref name="size"/>.</exception>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void HasSizeLessThanOrEqualTo(string text, int size, [CallerArgumentExpression("text")] string name = "")
+	public static void HasSizeLessThanOrEqualTo(string text, int size,
+		[CallerArgumentExpression("text")] string name = "")
 	{
 		if (text.Length <= size)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForHasSizeLessThanOrEqualTo(text, size, name);
 	}
@@ -267,12 +242,11 @@ public partial class Guard
 	/// <exception cref="ArgumentException">Thrown if the size of <paramref name="text"/> is != the one of <paramref name="destination"/>.</exception>
 	/// <remarks>The <see cref="string"/> type is immutable, but the name of this API is kept for consistency with the other overloads.</remarks>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void HasSizeEqualTo(string text, string destination, [CallerArgumentExpression("text")] string name = "")
+	public static void HasSizeEqualTo(string text, string destination,
+		[CallerArgumentExpression("text")] string name = "")
 	{
 		if (text.Length == destination.Length)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForHasSizeEqualTo(text, destination, name);
 	}
@@ -286,12 +260,11 @@ public partial class Guard
 	/// <exception cref="ArgumentException">Thrown if the size of <paramref name="text"/> is > the one of <paramref name="destination"/>.</exception>
 	/// <remarks>The <see cref="string"/> type is immutable, but the name of this API is kept for consistency with the other overloads.</remarks>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void HasSizeLessThanOrEqualTo(string text, string destination, [CallerArgumentExpression("text")] string name = "")
+	public static void HasSizeLessThanOrEqualTo(string text, string destination,
+		[CallerArgumentExpression("text")] string name = "")
 	{
 		if (text.Length <= destination.Length)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForHasSizeLessThanOrEqualTo(text, destination, name);
 	}
@@ -307,9 +280,7 @@ public partial class Guard
 	public static void IsInRangeFor(int index, string text, [CallerArgumentExpression("index")] string name = "")
 	{
 		if ((uint)index < (uint)text.Length)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentOutOfRangeExceptionForIsInRangeFor(index, text, name);
 	}
@@ -325,9 +296,7 @@ public partial class Guard
 	public static void IsNotInRangeFor(int index, string text, [CallerArgumentExpression("index")] string name = "")
 	{
 		if ((uint)index >= (uint)text.Length)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentOutOfRangeExceptionForIsNotInRangeFor(index, text, name);
 	}

@@ -8,8 +8,12 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using JetBrains.Annotations;
 
 namespace FisheryLib;
+
+[PublicAPI]
+#pragma warning disable CS8500
 public static class ReadOnlySpanExtensions
 {
 	/// <summary>
@@ -67,14 +71,14 @@ public static class ReadOnlySpanExtensions
 		=> ref Unsafe.Add(ref span.DangerousGetPinnableReference(), i);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static T First<T>(this ReadOnlySpan<T> span)
-		=> span[0];
+	public static T First<T>(this ReadOnlySpan<T> span) => span[0];
 
 	[return: MaybeNull]
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static T FirstOrDefault<T>(this ReadOnlySpan<T> span)
-		=> !span.IsEmpty ? span[0]
-		: default;
+		=> !span.IsEmpty
+			? span[0]
+			: default;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static unsafe TSource First<TSource>(this ReadOnlySpan<TSource> span, delegate*<TSource, bool> predicate)
@@ -87,6 +91,7 @@ public static class ReadOnlySpanExtensions
 		{
 			if (predicate(Unsafe.Add(ref r0, offset)))
 				goto returnForOffset0;
+
 			if (predicate(Unsafe.Add(ref r0, offset + 1)))
 				return Unsafe.Add(ref r0, offset + 1);
 			if (predicate(Unsafe.Add(ref r0, offset + 2)))
@@ -124,6 +129,7 @@ public static class ReadOnlySpanExtensions
 		{
 			if (predicate(Unsafe.Add(ref r0, offset)))
 				goto returnForOffset0;
+
 			if (predicate(Unsafe.Add(ref r0, offset + 1)))
 				return Unsafe.Add(ref r0, offset + 1);
 			if (predicate(Unsafe.Add(ref r0, offset + 2)))
@@ -155,7 +161,8 @@ public static class ReadOnlySpanExtensions
 
 	[return: MaybeNull]
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static unsafe TSource FirstOrDefault<TSource>(this ReadOnlySpan<TSource> span, delegate*<TSource, bool> predicate)
+	public static unsafe TSource FirstOrDefault<TSource>(this ReadOnlySpan<TSource> span,
+		delegate*<TSource, bool> predicate)
 	{
 		ref var r0 = ref span.DangerousGetPinnableReference();
 		var length = (nint)(uint)span.Length;
@@ -165,6 +172,7 @@ public static class ReadOnlySpanExtensions
 		{
 			if (predicate(Unsafe.Add(ref r0, offset)))
 				goto returnForOffset0;
+
 			if (predicate(Unsafe.Add(ref r0, offset + 1)))
 				return Unsafe.Add(ref r0, offset + 1);
 			if (predicate(Unsafe.Add(ref r0, offset + 2)))
@@ -203,6 +211,7 @@ public static class ReadOnlySpanExtensions
 		{
 			if (predicate(Unsafe.Add(ref r0, offset)))
 				goto returnForOffset0;
+
 			if (predicate(Unsafe.Add(ref r0, offset + 1)))
 				return Unsafe.Add(ref r0, offset + 1);
 			if (predicate(Unsafe.Add(ref r0, offset + 2)))
@@ -230,8 +239,7 @@ public static class ReadOnlySpanExtensions
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool Any<TSource>(this ReadOnlySpan<TSource> span)
-		=> !span.IsEmpty;
+	public static bool Any<TSource>(this ReadOnlySpan<TSource> span) => !span.IsEmpty;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static unsafe bool Any<TSource>(this ReadOnlySpan<TSource> span, delegate*<TSource, bool> predicate)
@@ -246,9 +254,7 @@ public static class ReadOnlySpanExtensions
 				|| predicate(Unsafe.Add(ref r0, offset + 1))
 				|| predicate(Unsafe.Add(ref r0, offset + 2))
 				|| predicate(Unsafe.Add(ref r0, offset + 3)))
-			{
 				return true;
-			}
 
 			length -= 4;
 			offset += 4;
@@ -279,9 +285,7 @@ public static class ReadOnlySpanExtensions
 				|| predicate(Unsafe.Add(ref r0, offset + 1))
 				|| predicate(Unsafe.Add(ref r0, offset + 2))
 				|| predicate(Unsafe.Add(ref r0, offset + 3)))
-			{
 				return true;
-			}
 
 			length -= 4;
 			offset += 4;
@@ -351,9 +355,7 @@ public static class ReadOnlySpanExtensions
 				|| Unsafe.Add(ref r0, offset + 1).Equals<T>(value)
 				|| Unsafe.Add(ref r0, offset + 2).Equals<T>(value)
 				|| Unsafe.Add(ref r0, offset + 3).Equals<T>(value))
-			{
 				return true;
-			}
 
 			length -= 4;
 			offset += 4;
@@ -438,14 +440,15 @@ public static class ReadOnlySpanReferenceExtensions
 	/// <param name="reference">The reference to the target item to get the index for.</param>
 	/// <returns>The index of <paramref name="reference"/> within <paramref name="span"/>, or <c>-1</c>.</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static int IndexOf<T>(this ReadOnlySpan<T> span, ref T reference)
+	public static unsafe int IndexOf<T>(this ReadOnlySpan<T> span, ref T reference)
 	{
 		ref var r0 = ref span.DangerousGetPinnableReference();
 		var byteOffset = Unsafe.ByteOffset(ref r0, ref reference);
 
-		var elementOffset = byteOffset / (nint)(uint)Unsafe.SizeOf<T>();
+		var elementOffset = byteOffset / (nint)(uint)sizeof(T);
 
-		return (nuint)elementOffset >= (uint)span.Length ? -1
+		return (nuint)elementOffset >= (uint)span.Length
+			? -1
 			: (int)elementOffset;
 	}
 
@@ -457,8 +460,7 @@ public static class ReadOnlySpanReferenceExtensions
 	/// <param name="reference">The reference to the target item to locate.</param>
 	/// <returns>true if the reference points towards an element of <see cref="ReadOnlySpan{T}"/>; otherwise, false.</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool Contains<T>(this ReadOnlySpan<T> span, ref T reference)
-		=> span.IndexOf(ref reference) >= 0;
+	public static bool Contains<T>(this ReadOnlySpan<T> span, ref T reference) => span.IndexOf(ref reference) >= 0;
 }
 
 public static class ReadOnlySpanStructExtensions
@@ -517,9 +519,7 @@ public static class ReadOnlySpanStructExtensions
 				|| Unsafe.Add(ref r0, offset + 1).Equals(ref Unsafe.AsRef(in value))
 				|| Unsafe.Add(ref r0, offset + 2).Equals(ref Unsafe.AsRef(in value))
 				|| Unsafe.Add(ref r0, offset + 3).Equals(ref Unsafe.AsRef(in value)))
-			{
 				return true;
-			}
 
 			length -= 4;
 			offset += 4;
@@ -572,3 +572,4 @@ public static class ReadOnlySpanStructExtensions
 		return -1;
 	}
 }
+#pragma warning restore CS8500

@@ -52,9 +52,7 @@ public static class TypeExtensions
 		{
 			// Primitive types use the keyword name
 			if (BuiltInTypesMap.TryGetValue(type, out var typeName))
-			{
 				return typeName!;
-			}
 
 			// Array types are displayed as Foo[]
 			if (type.IsArray)
@@ -62,7 +60,8 @@ public static class TypeExtensions
 				var elementType = type.GetElementType()!;
 				var rank = type.GetArrayRank();
 
-				return $"{FormatDisplayString(elementType, 0, elementType.GetGenericArguments())}[{new string(',', rank - 1)}]";
+				return $"{FormatDisplayString(elementType, 0,
+						elementType.GetGenericArguments())}[{new string(',', rank - 1)}]";
 			}
 
 			// By checking generic types here we are only interested in specific cases,
@@ -84,16 +83,17 @@ public static class TypeExtensions
 				}
 
 				// ValueTuple<T1, T2> types are displayed as (T1, T2)
-				if (genericTypeDefinition == typeof(ValueTuple<>) ||
-					genericTypeDefinition == typeof(ValueTuple<,>) ||
-					genericTypeDefinition == typeof(ValueTuple<,,>) ||
-					genericTypeDefinition == typeof(ValueTuple<,,,>) ||
-					genericTypeDefinition == typeof(ValueTuple<,,,,>) ||
-					genericTypeDefinition == typeof(ValueTuple<,,,,,>) ||
-					genericTypeDefinition == typeof(ValueTuple<,,,,,,>) ||
-					genericTypeDefinition == typeof(ValueTuple<,,,,,,,>))
+				if (genericTypeDefinition == typeof(ValueTuple<>)
+					|| genericTypeDefinition == typeof(ValueTuple<,>)
+					|| genericTypeDefinition == typeof(ValueTuple<,,>)
+					|| genericTypeDefinition == typeof(ValueTuple<,,,>)
+					|| genericTypeDefinition == typeof(ValueTuple<,,,,>)
+					|| genericTypeDefinition == typeof(ValueTuple<,,,,,>)
+					|| genericTypeDefinition == typeof(ValueTuple<,,,,,,>)
+					|| genericTypeDefinition == typeof(ValueTuple<,,,,,,,>))
 				{
-					var formattedTypes = type.GetGenericArguments().Select(t => FormatDisplayString(t, 0, t.GetGenericArguments()));
+					var formattedTypes = type.GetGenericArguments()
+						.Select(static t => FormatDisplayString(t, 0, t.GetGenericArguments()));
 
 					return $"({string.Join(", ", formattedTypes)})";
 				}
@@ -109,7 +109,8 @@ public static class TypeExtensions
 				var genericArgumentsCount = int.Parse(tokens[1]);
 				var typeArgumentsOffset = typeArguments.Length - genericTypeOffset - genericArgumentsCount;
 				var currentTypeArguments = typeArguments.Slice(typeArgumentsOffset, genericArgumentsCount).ToArray();
-				var formattedTypes = currentTypeArguments.Select(t => FormatDisplayString(t, 0, t.GetGenericArguments()));
+				var formattedTypes
+					= currentTypeArguments.Select(static t => FormatDisplayString(t, 0, t.GetGenericArguments()));
 
 				// Standard generic types are displayed as Foo<T>
 				displayName = $"{tokens[0]}<{string.Join(", ", formattedTypes)}>";
@@ -130,7 +131,7 @@ public static class TypeExtensions
 		}
 
 		// Atomically get or build the display string for the current type.
-		return DisplayNames.GetValue(type, t =>
+		return DisplayNames.GetValue(type, static t =>
 		{
 			// By-ref types are displayed as T&
 			if (t.IsByRef)

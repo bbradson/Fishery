@@ -3,118 +3,96 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-using System.Linq;
+using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using System.Security;
+using JetBrains.Annotations;
 
 namespace FisheryLib.FunctionPointers;
+
 public static class EqualsByRef<T>
 {
-	public static readonly unsafe delegate*<ref T, ref T, bool> Default = (delegate*<ref T, ref T, bool>)EqualsByRef.MakeDelegate(typeof(T));
+	public static readonly unsafe delegate*<ref T, ref T, bool> Default
+		= (delegate*<ref T, ref T, bool>)EqualsByRef.EqualsMethods.GetFunctionPointer(typeof(T));
 }
 
 public static class EqualsByRef
 {
+	[UsedImplicitly(ImplicitUseTargetFlags.Members)]
 	public static class Methods
 	{
-		public static bool Byte(ref byte x, ref byte y)
-			=> x == y;
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool Byte(ref byte x, ref byte y) => x == y;
 
-		public static bool Int(ref int x, ref int y)
-			=> x == y;
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool Int(ref int x, ref int y) => x == y;
 
-		public static bool Uint(ref uint x, ref uint y)
-			=> x == y;
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool Uint(ref uint x, ref uint y) => x == y;
 
-		public static bool Ushort(ref ushort x, ref ushort y)
-			=> x == y;
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool Ushort(ref ushort x, ref ushort y) => x == y;
 
-		public static bool IntPtr(ref IntPtr x, ref IntPtr y)
-			=> x == y;
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool IntPtr(ref IntPtr x, ref IntPtr y) => x == y;
 
-		public static bool String(ref string x, ref string y)
-			=> string.Equals(x, y);
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool String(ref string x, ref string y) => string.Equals(x, y);
 
-		public static unsafe bool VoidPtr(ref void* x, ref void* y)
-			=> x == y;
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static unsafe bool VoidPtr(ref void* x, ref void* y) => x == y;
 
-		public static bool RuntimeFieldHandle(ref RuntimeFieldHandle x, ref RuntimeFieldHandle y)
-			=> x.Value == y.Value;
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		[SecuritySafeCritical]
+		public static bool RuntimeFieldHandle(ref RuntimeFieldHandle x, ref RuntimeFieldHandle y) => x.Value == y.Value;
 
-		public static bool RuntimeTypeHandle(ref RuntimeTypeHandle x, ref RuntimeTypeHandle y)
-			=> x.Value == y.Value;
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		[SecuritySafeCritical]
+		public static bool RuntimeTypeHandle(ref RuntimeTypeHandle x, ref RuntimeTypeHandle y) => x.Value == y.Value;
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		[SecuritySafeCritical]
 		public static bool RuntimeMethodHandle(ref RuntimeMethodHandle x, ref RuntimeMethodHandle y)
 			=> x.Value == y.Value;
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool Label(ref Label x, ref Label y) => x.label == y.label;
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool Enum<T>(ref T x, ref T y) where T : struct
 			=> JitHelpers.UnsafeEnumCast(x) == JitHelpers.UnsafeEnumCast(y);
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool LongEnum<T>(ref T x, ref T y) where T : struct
 			=> JitHelpers.UnsafeEnumCastLong(x) == JitHelpers.UnsafeEnumCastLong(y);
 
-		public static bool EquatableValueType<T>(ref T x, ref T y) where T : struct, IEquatable<T>
-			=> x.Equals(y);
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool EquatableValueType<T>(ref T x, ref T y) where T : struct, IEquatable<T> => x.Equals(y);
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool Nullable<T>(ref T? x, ref T? y) where T : struct, IEquatable<T>
 			=> x.HasValue
-			? y.HasValue && x.Value.Equals(y.Value)
-			: !y.HasValue;
+				? y.HasValue && x.Value.Equals(y.Value)
+				: !y.HasValue;
 
-		public static bool EquatableReferenceType<T>(ref T x, ref T y) where T : IEquatable<T>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool EquatableReferenceType<T>(ref T? x, ref T? y) where T : class, IEquatable<T>
 			=> x != null
-			? y != null && x.Equals(y)
-			: y == null;
+				? y != null && x.Equals(y)
+				: y == null;
 
-		public static bool Reference<T>(ref T x, ref T y) where T : class
-			=> x == y;
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool Reference<T>(ref T x, ref T y) where T : class => x == y;
 
-		public static bool Object<T>(ref T x, ref T y)
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool Object<T>(ref T? x, ref T? y) where T : class
 			=> x != null
-			? y != null && x.Equals(y)
-			: y == null;
+				? y != null && x.Equals(y)
+				: y == null;
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool ValueType<T>(ref T x, ref T y) where T : struct => x.Equals(y);
 	}
 
-	internal static unsafe IntPtr MakeDelegate(Type type)
-		=> _equalsMethods.Where(m => !m.IsGenericMethod)
-			.FirstOrDefault(m
-				=> m.GetParameters().First().ParameterType.GetElementType() == type)
-			is { } specializedMethod
-		? specializedMethod.GetFunctionPointer()
-		: type.IsAssignableTo(typeof(IEquatable<>), type)
-		? GetMethod(
-			type.IsValueType
-			? nameof(Methods.EquatableValueType)
-			: nameof(Methods.EquatableReferenceType))
-			.MakeGenericMethod(type).GetFunctionPointer()
-		: type.IsNullable(out var genericArgument)
-			&& genericArgument.IsAssignableTo(typeof(IEquatable<>), genericArgument)
-		? GetMethod(nameof(Methods.Nullable)).MakeGenericMethod(genericArgument).GetFunctionPointer()
-		: GetMethod(
-			type.IsEnum
-			? Type.GetTypeCode(Enum.GetUnderlyingType(type))
-				switch
-			{
-				TypeCode.Int16
-				or TypeCode.SByte
-				or TypeCode.Byte
-				or TypeCode.UInt16
-				or TypeCode.Int32
-				or TypeCode.UInt32 => nameof(Methods.Enum),
-				TypeCode.Int64
-				or TypeCode.UInt64 => nameof(Methods.LongEnum),
-				_ => ThrowHelper.ThrowNotSupportedException<string>()
-			}
-			: nameof(Methods.Object)
-		).MakeGenericMethod(type).GetFunctionPointer();
-
-	private static MethodInfo GetMethod(string name)
-		=> Array.Find(_equalsMethods, m => m.Name == name);
-
-	private static MethodInfo[] _equalsMethods
-		= typeof(Methods)
-		.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
-		.Where(m
-			=> m.ReturnType == typeof(bool)
-			&& m.GetParameters().Length == 2)
-		.ToArray();
+	public static readonly MethodFactory.Equals EqualsMethods = new(typeof(Methods), "FisheryEqualsByRefMethod_", true);
 }

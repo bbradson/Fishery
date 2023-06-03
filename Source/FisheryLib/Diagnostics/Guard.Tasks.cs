@@ -20,9 +20,7 @@ public partial class Guard
 	public static void IsCompleted(Task task, [CallerArgumentExpression("task")] string name = "")
 	{
 		if (task.IsCompleted)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsCompleted(task, name);
 	}
@@ -37,9 +35,7 @@ public partial class Guard
 	public static void IsNotCompleted(Task task, [CallerArgumentExpression("task")] string name = "")
 	{
 		if (!task.IsCompleted)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsNotCompleted(task, name);
 	}
@@ -54,9 +50,7 @@ public partial class Guard
 	public static void IsCompletedSuccessfully(Task task, [CallerArgumentExpression("task")] string name = "")
 	{
 		if (task.Status == TaskStatus.RanToCompletion)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsCompletedSuccessfully(task, name);
 	}
@@ -71,9 +65,7 @@ public partial class Guard
 	public static void IsNotCompletedSuccessfully(Task task, [CallerArgumentExpression("task")] string name = "")
 	{
 		if (task.Status != TaskStatus.RanToCompletion)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsNotCompletedSuccessfully(task, name);
 	}
@@ -88,9 +80,7 @@ public partial class Guard
 	public static void IsFaulted(Task task, [CallerArgumentExpression("task")] string name = "")
 	{
 		if (task.IsFaulted)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsFaulted(task, name);
 	}
@@ -105,9 +95,7 @@ public partial class Guard
 	public static void IsNotFaulted(Task task, [CallerArgumentExpression("task")] string name = "")
 	{
 		if (!task.IsFaulted)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsNotFaulted(task, name);
 	}
@@ -122,9 +110,7 @@ public partial class Guard
 	public static void IsCanceled(Task task, [CallerArgumentExpression("task")] string name = "")
 	{
 		if (task.IsCanceled)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsCanceled(task, name);
 	}
@@ -139,9 +125,7 @@ public partial class Guard
 	public static void IsNotCanceled(Task task, [CallerArgumentExpression("task")] string name = "")
 	{
 		if (!task.IsCanceled)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsNotCanceled(task, name);
 	}
@@ -154,12 +138,11 @@ public partial class Guard
 	/// <param name="name">The name of the input parameter being tested.</param>
 	/// <exception cref="ArgumentException">Thrown if <paramref name="task"/> doesn't match <paramref name="status"/>.</exception>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void HasStatusEqualTo(Task task, TaskStatus status, [CallerArgumentExpression("task")] string name = "")
+	public static void HasStatusEqualTo(Task task, TaskStatus status,
+		[CallerArgumentExpression("task")] string name = "")
 	{
 		if (task.Status == status)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForHasStatusEqualTo(task, status, name);
 	}
@@ -172,12 +155,11 @@ public partial class Guard
 	/// <param name="name">The name of the input parameter being tested.</param>
 	/// <exception cref="ArgumentException">Thrown if <paramref name="task"/> matches <paramref name="status"/>.</exception>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void HasStatusNotEqualTo(Task task, TaskStatus status, [CallerArgumentExpression("task")] string name = "")
+	public static void HasStatusNotEqualTo(Task task, TaskStatus status,
+		[CallerArgumentExpression("task")] string name = "")
 	{
 		if (task.Status != status)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForHasStatusNotEqualTo(task, status, name);
 	}

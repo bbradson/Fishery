@@ -21,9 +21,7 @@ public partial class Guard
 		where T : struct, IEquatable<T>
 	{
 		if (value.Equals(default))
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsDefault(value, name);
 	}
@@ -40,9 +38,7 @@ public partial class Guard
 		where T : struct, IEquatable<T>
 	{
 		if (!value.Equals(default))
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsNotDefault<T>(name);
 	}
@@ -61,9 +57,7 @@ public partial class Guard
 		where T : notnull, IEquatable<T>
 	{
 		if (value.Equals(target))
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsEqualTo(value, target, name);
 	}
@@ -82,9 +76,7 @@ public partial class Guard
 		where T : notnull, IEquatable<T>
 	{
 		if (!value.Equals(target))
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsNotEqualTo(value, target, name);
 	}
@@ -98,7 +90,8 @@ public partial class Guard
 	/// <param name="name">The name of the input parameter being tested.</param>
 	/// <exception cref="ArgumentException">Thrown if <paramref name="value"/> is not a bitwise match for <paramref name="target"/>.</exception>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static unsafe void IsBitwiseEqualTo<T>(T value, T target, [CallerArgumentExpression("value")] string name = "")
+	public static unsafe void IsBitwiseEqualTo<T>(T value, T target,
+		[CallerArgumentExpression("value")] string name = "")
 		where T : unmanaged
 	{
 		// Include some fast paths if the input type is of size 1, 2, 4, 8, or 16.
@@ -112,9 +105,7 @@ public partial class Guard
 			var targetByte = Unsafe.As<T, byte>(ref target);
 
 			if (valueByte == targetByte)
-			{
 				return;
-			}
 
 			ThrowHelper.ThrowArgumentExceptionForBitwiseEqualTo(value, target, name);
 		}
@@ -124,9 +115,7 @@ public partial class Guard
 			var targetUShort = Unsafe.As<T, ushort>(ref target);
 
 			if (valueUShort == targetUShort)
-			{
 				return;
-			}
 
 			ThrowHelper.ThrowArgumentExceptionForBitwiseEqualTo(value, target, name);
 		}
@@ -136,9 +125,7 @@ public partial class Guard
 			var targetUInt = Unsafe.As<T, uint>(ref target);
 
 			if (valueUInt == targetUInt)
-			{
 				return;
-			}
 
 			ThrowHelper.ThrowArgumentExceptionForBitwiseEqualTo(value, target, name);
 		}
@@ -148,9 +135,7 @@ public partial class Guard
 			var targetULong = Unsafe.As<T, ulong>(ref target);
 
 			if (Bit64Compare(ref valueULong, ref targetULong))
-			{
 				return;
-			}
 
 			ThrowHelper.ThrowArgumentExceptionForBitwiseEqualTo(value, target, name);
 		}
@@ -165,9 +150,7 @@ public partial class Guard
 				var targetULong1 = Unsafe.Add(ref Unsafe.As<T, ulong>(ref target), 1);
 
 				if (Bit64Compare(ref valueULong1, ref targetULong1))
-				{
 					return;
-				}
 			}
 
 			ThrowHelper.ThrowArgumentExceptionForBitwiseEqualTo(value, target, name);
@@ -178,9 +161,7 @@ public partial class Guard
 			Span<byte> targetBytes = new(Unsafe.AsPointer(ref target), sizeof(T));
 
 			if (valueBytes.SequenceEqual(targetBytes))
-			{
 				return;
-			}
 
 			ThrowHelper.ThrowArgumentExceptionForBitwiseEqualTo(value, target, name);
 		}
@@ -196,8 +177,7 @@ public partial class Guard
 			ref var r0 = ref Unsafe.As<ulong, int>(ref left);
 			ref var r1 = ref Unsafe.As<ulong, int>(ref right);
 
-			return r0 == r1 &&
-				   Unsafe.Add(ref r0, 1) == Unsafe.Add(ref r1, 1);
+			return r0 == r1 && Unsafe.Add(ref r0, 1) == Unsafe.Add(ref r1, 1);
 		}
 
 		return left == right;
@@ -217,9 +197,7 @@ public partial class Guard
 		where T : notnull, IComparable<T>
 	{
 		if (value.CompareTo(maximum) < 0)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentOutOfRangeExceptionForIsLessThan(value, maximum, name);
 	}
@@ -238,9 +216,7 @@ public partial class Guard
 		where T : notnull, IComparable<T>
 	{
 		if (value.CompareTo(maximum) <= 0)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentOutOfRangeExceptionForIsLessThanOrEqualTo(value, maximum, name);
 	}
@@ -259,9 +235,7 @@ public partial class Guard
 		where T : notnull, IComparable<T>
 	{
 		if (value.CompareTo(minimum) > 0)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentOutOfRangeExceptionForIsGreaterThan(value, minimum, name);
 	}
@@ -276,13 +250,12 @@ public partial class Guard
 	/// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="value"/> is &lt; <paramref name="minimum"/>.</exception>
 	/// <remarks>The method is generic to avoid boxing the parameters, if they are value types.</remarks>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void IsGreaterThanOrEqualTo<T>(T value, T minimum, [CallerArgumentExpression("value")] string name = "")
+	public static void IsGreaterThanOrEqualTo<T>(T value, T minimum,
+		[CallerArgumentExpression("value")] string name = "")
 		where T : notnull, IComparable<T>
 	{
 		if (value.CompareTo(minimum) >= 0)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentOutOfRangeExceptionForIsGreaterThanOrEqualTo(value, minimum, name);
 	}
@@ -305,9 +278,7 @@ public partial class Guard
 		where T : notnull, IComparable<T>
 	{
 		if (value.CompareTo(minimum) >= 0 && value.CompareTo(maximum) < 0)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentOutOfRangeExceptionForIsInRange(value, minimum, maximum, name);
 	}
@@ -326,13 +297,12 @@ public partial class Guard
 	/// The method is generic to avoid boxing the parameters, if they are value types.
 	/// </remarks>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void IsNotInRange<T>(T value, T minimum, T maximum, [CallerArgumentExpression("value")] string name = "")
+	public static void IsNotInRange<T>(T value, T minimum, T maximum,
+		[CallerArgumentExpression("value")] string name = "")
 		where T : notnull, IComparable<T>
 	{
 		if (value.CompareTo(minimum) < 0 || value.CompareTo(maximum) >= 0)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentOutOfRangeExceptionForIsNotInRange(value, minimum, maximum, name);
 	}
@@ -355,9 +325,7 @@ public partial class Guard
 		where T : notnull, IComparable<T>
 	{
 		if (value.CompareTo(minimum) > 0 && value.CompareTo(maximum) < 0)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentOutOfRangeExceptionForIsBetween(value, minimum, maximum, name);
 	}
@@ -376,13 +344,12 @@ public partial class Guard
 	/// The method is generic to avoid boxing the parameters, if they are value types.
 	/// </remarks>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void IsNotBetween<T>(T value, T minimum, T maximum, [CallerArgumentExpression("value")] string name = "")
+	public static void IsNotBetween<T>(T value, T minimum, T maximum,
+		[CallerArgumentExpression("value")] string name = "")
 		where T : notnull, IComparable<T>
 	{
 		if (value.CompareTo(minimum) <= 0 || value.CompareTo(maximum) >= 0)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentOutOfRangeExceptionForIsNotBetween(value, minimum, maximum, name);
 	}
@@ -401,13 +368,12 @@ public partial class Guard
 	/// The method is generic to avoid boxing the parameters, if they are value types.
 	/// </remarks>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void IsBetweenOrEqualTo<T>(T value, T minimum, T maximum, [CallerArgumentExpression("value")] string name = "")
+	public static void IsBetweenOrEqualTo<T>(T value, T minimum, T maximum,
+		[CallerArgumentExpression("value")] string name = "")
 		where T : notnull, IComparable<T>
 	{
 		if (value.CompareTo(minimum) >= 0 && value.CompareTo(maximum) <= 0)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentOutOfRangeExceptionForIsBetweenOrEqualTo(value, minimum, maximum, name);
 	}
@@ -426,13 +392,12 @@ public partial class Guard
 	/// The method is generic to avoid boxing the parameters, if they are value types.
 	/// </remarks>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void IsNotBetweenOrEqualTo<T>(T value, T minimum, T maximum, [CallerArgumentExpression("value")] string name = "")
+	public static void IsNotBetweenOrEqualTo<T>(T value, T minimum, T maximum,
+		[CallerArgumentExpression("value")] string name = "")
 		where T : notnull, IComparable<T>
 	{
 		if (value.CompareTo(minimum) < 0 || value.CompareTo(maximum) > 0)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentOutOfRangeExceptionForIsNotBetweenOrEqualTo(value, minimum, maximum, name);
 	}

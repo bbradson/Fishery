@@ -20,9 +20,7 @@ public partial class Guard
 	public static void CanRead(Stream stream, [CallerArgumentExpression("stream")] string name = "")
 	{
 		if (stream.CanRead)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForCanRead(stream, name);
 	}
@@ -37,9 +35,7 @@ public partial class Guard
 	public static void CanWrite(Stream stream, [CallerArgumentExpression("stream")] string name = "")
 	{
 		if (stream.CanWrite)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForCanWrite(stream, name);
 	}
@@ -54,9 +50,7 @@ public partial class Guard
 	public static void CanSeek(Stream stream, [CallerArgumentExpression("stream")] string name = "")
 	{
 		if (stream.CanSeek)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForCanSeek(stream, name);
 	}
@@ -71,9 +65,7 @@ public partial class Guard
 	public static void IsAtStartPosition(Stream stream, [CallerArgumentExpression("stream")] string name = "")
 	{
 		if (stream.Position == 0)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsAtStartPosition(stream, name);
 	}

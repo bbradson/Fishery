@@ -28,7 +28,8 @@ public static partial class ThrowHelper
 	/// <param name="message">The message to include in the exception.</param>
 	/// <exception cref="ArrayTypeMismatchException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowArrayTypeMismatchException(string? message) => throw new ArrayTypeMismatchException(message);
+	public static void ThrowArrayTypeMismatchException(string? message)
+		=> throw new ArrayTypeMismatchException(message);
 
 	/// <summary>
 	/// Throws a new <see cref="ArrayTypeMismatchException"/>.
@@ -37,7 +38,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="ArrayTypeMismatchException">Thrown with the specified parameters.</exception>
 	[DoesNotReturn]
-	public static void ThrowArrayTypeMismatchException(string? message, Exception? innerException) => throw new ArrayTypeMismatchException(message, innerException);
+	public static void ThrowArrayTypeMismatchException(string? message, Exception? innerException)
+		=> throw new ArrayTypeMismatchException(message, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="ArgumentException"/>.
@@ -61,7 +63,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="ArgumentException">Thrown with the specified parameters.</exception>
 	[DoesNotReturn]
-	public static void ThrowArgumentException(string? message, Exception? innerException) => throw new ArgumentException(message, innerException);
+	public static void ThrowArgumentException(string? message, Exception? innerException)
+		=> throw new ArgumentException(message, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="ArgumentException"/>.
@@ -70,7 +73,8 @@ public static partial class ThrowHelper
 	/// <param name="message">The message to include in the exception.</param>
 	/// <exception cref="ArgumentException">Thrown with the specified parameters.</exception>
 	[DoesNotReturn]
-	public static void ThrowArgumentException(string? name, string? message) => throw new ArgumentException(message, name);
+	public static void ThrowArgumentException(string? name, string? message)
+		=> throw new ArgumentException(message, name);
 
 	/// <summary>
 	/// Throws a new <see cref="ArgumentException"/>.
@@ -80,7 +84,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="ArgumentException">Thrown with the specified parameters.</exception>
 	[DoesNotReturn]
-	public static void ThrowArgumentException(string? name, string? message, Exception? innerException) => throw new ArgumentException(message, name, innerException);
+	public static void ThrowArgumentException(string? name, string? message, Exception? innerException)
+		=> throw new ArgumentException(message, name, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="ArgumentNullException"/>.
@@ -104,7 +109,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="ArgumentNullException">Thrown with the specified parameters.</exception>
 	[DoesNotReturn]
-	public static void ThrowArgumentNullException(string? name, Exception? innerException) => throw new ArgumentNullException(name, innerException);
+	public static void ThrowArgumentNullException(string? name, Exception? innerException)
+		=> throw new ArgumentNullException(name, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="ArgumentNullException"/>.
@@ -113,7 +119,8 @@ public static partial class ThrowHelper
 	/// <param name="message">The message to include in the exception.</param>
 	/// <exception cref="ArgumentNullException">Thrown with the specified parameters.</exception>
 	[DoesNotReturn]
-	public static void ThrowArgumentNullException(string? name, string? message) => throw new ArgumentNullException(name, message);
+	public static void ThrowArgumentNullException(string? name, string? message)
+		=> throw new ArgumentNullException(name, message);
 
 	/// <summary>
 	/// Throws a new <see cref="ArgumentOutOfRangeException"/>.
@@ -137,7 +144,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="ArgumentOutOfRangeException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowArgumentOutOfRangeException(string? name, Exception? innerException) => throw new ArgumentOutOfRangeException(name, innerException);
+	public static void ThrowArgumentOutOfRangeException(string? name, Exception? innerException)
+		=> throw new ArgumentOutOfRangeException(name, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="ArgumentOutOfRangeException"/>.
@@ -146,7 +154,8 @@ public static partial class ThrowHelper
 	/// <param name="message">The message to include in the exception.</param>
 	/// <exception cref="ArgumentOutOfRangeException">Thrown with the specified parameters.</exception>
 	[DoesNotReturn]
-	public static void ThrowArgumentOutOfRangeException(string? name, string? message) => throw new ArgumentOutOfRangeException(name, message);
+	public static void ThrowArgumentOutOfRangeException(string? name, string? message)
+		=> throw new ArgumentOutOfRangeException(name, message);
 
 	/// <summary>
 	/// Throws a new <see cref="ArgumentOutOfRangeException"/>.
@@ -156,7 +165,8 @@ public static partial class ThrowHelper
 	/// <param name="message">The message to include in the exception.</param>
 	/// <exception cref="ArgumentOutOfRangeException">Thrown with the specified parameters.</exception>
 	[DoesNotReturn]
-	public static void ThrowArgumentOutOfRangeException(string? name, object? value, string? message) => throw new ArgumentOutOfRangeException(name, value, message);
+	public static void ThrowArgumentOutOfRangeException(string? name, object? value, string? message)
+		=> throw new ArgumentOutOfRangeException(name, value, message);
 
 	/// <summary>
 	/// Throws a new <see cref="COMException"/>.
@@ -180,7 +190,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="COMException">Thrown with the specified parameters.</exception>
 	[DoesNotReturn]
-	public static void ThrowCOMException(string? message, Exception? innerException) => throw new COMException(message, innerException);
+	public static void ThrowCOMException(string? message, Exception? innerException)
+		=> throw new COMException(message, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="COMException"/>.
@@ -213,7 +224,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="ExternalException">Thrown with the specified parameters.</exception>
 	[DoesNotReturn]
-	public static void ThrowExternalException(string? message, Exception? innerException) => throw new ExternalException(message, innerException);
+	public static void ThrowExternalException(string? message, Exception? innerException)
+		=> throw new ExternalException(message, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="ExternalException"/>.
@@ -222,7 +234,8 @@ public static partial class ThrowHelper
 	/// <param name="error">The HRESULT of the error to include.</param>
 	/// <exception cref="ExternalException">Thrown with the specified parameters.</exception>
 	[DoesNotReturn]
-	public static void ThrowExternalException(string? message, int error) => throw new ExternalException(message, error);
+	public static void ThrowExternalException(string? message, int error)
+		=> throw new ExternalException(message, error);
 
 	/// <summary>
 	/// Throws a new <see cref="FormatException"/>.
@@ -246,7 +259,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="FormatException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowFormatException(string? message, Exception? innerException) => throw new FormatException(message, innerException);
+	public static void ThrowFormatException(string? message, Exception? innerException)
+		=> throw new FormatException(message, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="InsufficientMemoryException"/>.
@@ -261,7 +275,8 @@ public static partial class ThrowHelper
 	/// <param name="message">The message to include in the exception.</param>
 	/// <exception cref="InsufficientMemoryException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowInsufficientMemoryException(string? message) => throw new InsufficientMemoryException(message);
+	public static void ThrowInsufficientMemoryException(string? message)
+		=> throw new InsufficientMemoryException(message);
 
 	/// <summary>
 	/// Throws a new <see cref="InsufficientMemoryException"/>.
@@ -270,7 +285,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="InsufficientMemoryException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowInsufficientMemoryException(string? message, Exception? innerException) => throw new InsufficientMemoryException(message, innerException);
+	public static void ThrowInsufficientMemoryException(string? message, Exception? innerException)
+		=> throw new InsufficientMemoryException(message, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="InvalidDataException"/>.
@@ -294,7 +310,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="InvalidDataException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowInvalidDataException(string? message, Exception? innerException) => throw new InvalidDataException(message, innerException);
+	public static void ThrowInvalidDataException(string? message, Exception? innerException)
+		=> throw new InvalidDataException(message, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="InvalidOperationException"/>.
@@ -318,7 +335,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="InvalidOperationException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowInvalidOperationException(string? message, Exception? innerException) => throw new InvalidOperationException(message, innerException);
+	public static void ThrowInvalidOperationException(string? message, Exception? innerException)
+		=> throw new InvalidOperationException(message, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="LockRecursionException"/>.
@@ -342,7 +360,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="LockRecursionException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowLockRecursionException(string? message, Exception? innerException) => throw new LockRecursionException(message, innerException);
+	public static void ThrowLockRecursionException(string? message, Exception? innerException)
+		=> throw new LockRecursionException(message, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="MissingFieldException"/>.
@@ -366,7 +385,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="MissingFieldException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowMissingFieldException(string? message, Exception? innerException) => throw new MissingFieldException(message, innerException);
+	public static void ThrowMissingFieldException(string? message, Exception? innerException)
+		=> throw new MissingFieldException(message, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="MissingFieldException"/>.
@@ -375,7 +395,8 @@ public static partial class ThrowHelper
 	/// <param name="fieldName">The target field being retrieved.</param>
 	/// <exception cref="MissingFieldException">Thrown with the specified parameters.</exception>
 	[DoesNotReturn]
-	public static void ThrowMissingFieldException(string? className, string? fieldName) => throw new MissingFieldException(className, fieldName);
+	public static void ThrowMissingFieldException(string? className, string? fieldName)
+		=> throw new MissingFieldException(className, fieldName);
 
 	/// <summary>
 	/// Throws a new <see cref="MissingMemberException"/>.
@@ -399,7 +420,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="MissingMemberException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowMissingMemberException(string? message, Exception? innerException) => throw new MissingMemberException(message, innerException);
+	public static void ThrowMissingMemberException(string? message, Exception? innerException)
+		=> throw new MissingMemberException(message, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="MissingMemberException"/>.
@@ -408,7 +430,8 @@ public static partial class ThrowHelper
 	/// <param name="memberName">The target member being retrieved.</param>
 	/// <exception cref="MissingMemberException">Thrown with the specified parameters.</exception>
 	[DoesNotReturn]
-	public static void ThrowMissingMemberException(string? className, string? memberName) => throw new MissingMemberException(className, memberName);
+	public static void ThrowMissingMemberException(string? className, string? memberName)
+		=> throw new MissingMemberException(className, memberName);
 
 	/// <summary>
 	/// Throws a new <see cref="MissingMethodException"/>.
@@ -432,7 +455,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="MissingMethodException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowMissingMethodException(string? message, Exception? innerException) => throw new MissingMethodException(message, innerException);
+	public static void ThrowMissingMethodException(string? message, Exception? innerException)
+		=> throw new MissingMethodException(message, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="MissingMethodException"/>.
@@ -441,7 +465,8 @@ public static partial class ThrowHelper
 	/// <param name="methodName">The target method being retrieved.</param>
 	/// <exception cref="MissingMethodException">Thrown with the specified parameters.</exception>
 	[DoesNotReturn]
-	public static void ThrowMissingMethodException(string? className, string? methodName) => throw new MissingMethodException(className, methodName);
+	public static void ThrowMissingMethodException(string? className, string? methodName)
+		=> throw new MissingMethodException(className, methodName);
 
 	/// <summary>
 	/// Throws a new <see cref="NotSupportedException"/>.
@@ -465,7 +490,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="NotSupportedException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowNotSupportedException(string? message, Exception? innerException) => throw new NotSupportedException(message, innerException);
+	public static void ThrowNotSupportedException(string? message, Exception? innerException)
+		=> throw new NotSupportedException(message, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="ObjectDisposedException"/>.
@@ -473,7 +499,8 @@ public static partial class ThrowHelper
 	/// <param name="objectName">The name of the disposed object.</param>
 	/// <exception cref="ObjectDisposedException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowObjectDisposedException(string? objectName) => throw new ObjectDisposedException(objectName);
+	public static void ThrowObjectDisposedException(string? objectName)
+		=> throw new ObjectDisposedException(objectName);
 
 	/// <summary>
 	/// Throws a new <see cref="ObjectDisposedException"/>.
@@ -482,7 +509,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="ObjectDisposedException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowObjectDisposedException(string? objectName, Exception? innerException) => throw new ObjectDisposedException(objectName, innerException);
+	public static void ThrowObjectDisposedException(string? objectName, Exception? innerException)
+		=> throw new ObjectDisposedException(objectName, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="ObjectDisposedException"/>.
@@ -491,7 +519,8 @@ public static partial class ThrowHelper
 	/// <param name="message">The message to include in the exception.</param>
 	/// <exception cref="ObjectDisposedException">Thrown with the specified parameters.</exception>
 	[DoesNotReturn]
-	public static void ThrowObjectDisposedException(string? objectName, string? message) => throw new ObjectDisposedException(objectName, message);
+	public static void ThrowObjectDisposedException(string? objectName, string? message)
+		=> throw new ObjectDisposedException(objectName, message);
 
 	/// <summary>
 	/// Throws a new <see cref="OperationCanceledException"/>.
@@ -506,7 +535,8 @@ public static partial class ThrowHelper
 	/// <param name="message">The message to include in the exception.</param>
 	/// <exception cref="OperationCanceledException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowOperationCanceledException(string? message) => throw new OperationCanceledException(message);
+	public static void ThrowOperationCanceledException(string? message)
+		=> throw new OperationCanceledException(message);
 
 	/// <summary>
 	/// Throws a new <see cref="OperationCanceledException"/>.
@@ -515,7 +545,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="OperationCanceledException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowOperationCanceledException(string? message, Exception? innerException) => throw new OperationCanceledException(message, innerException);
+	public static void ThrowOperationCanceledException(string? message, Exception? innerException)
+		=> throw new OperationCanceledException(message, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="OperationCanceledException"/>.
@@ -523,7 +554,8 @@ public static partial class ThrowHelper
 	/// <param name="token">The <see cref="CancellationToken"/> in use.</param>
 	/// <exception cref="OperationCanceledException">Thrown with the specified parameters.</exception>
 	[DoesNotReturn]
-	public static void ThrowOperationCanceledException(CancellationToken token) => throw new OperationCanceledException(token);
+	public static void ThrowOperationCanceledException(CancellationToken token)
+		=> throw new OperationCanceledException(token);
 
 	/// <summary>
 	/// Throws a new <see cref="OperationCanceledException"/>.
@@ -532,7 +564,8 @@ public static partial class ThrowHelper
 	/// <param name="token">The <see cref="CancellationToken"/> in use.</param>
 	/// <exception cref="OperationCanceledException">Thrown with the specified parameters.</exception>
 	[DoesNotReturn]
-	public static void ThrowOperationCanceledException(string? message, CancellationToken token) => throw new OperationCanceledException(message, token);
+	public static void ThrowOperationCanceledException(string? message, CancellationToken token)
+		=> throw new OperationCanceledException(message, token);
 
 	/// <summary>
 	/// Throws a new <see cref="OperationCanceledException"/>.
@@ -542,7 +575,9 @@ public static partial class ThrowHelper
 	/// <param name="token">The <see cref="CancellationToken"/> in use.</param>
 	/// <exception cref="OperationCanceledException">Thrown with the specified parameters.</exception>
 	[DoesNotReturn]
-	public static void ThrowOperationCanceledException(string? message, Exception? innerException, CancellationToken token) => throw new OperationCanceledException(message, innerException, token);
+	public static void ThrowOperationCanceledException(string? message, Exception? innerException,
+		CancellationToken token)
+		=> throw new OperationCanceledException(message, innerException, token);
 
 	/// <summary>
 	/// Throws a new <see cref="PlatformNotSupportedException"/>.
@@ -557,7 +592,8 @@ public static partial class ThrowHelper
 	/// <param name="message">The message to include in the exception.</param>
 	/// <exception cref="PlatformNotSupportedException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowPlatformNotSupportedException(string? message) => throw new PlatformNotSupportedException(message);
+	public static void ThrowPlatformNotSupportedException(string? message)
+		=> throw new PlatformNotSupportedException(message);
 
 	/// <summary>
 	/// Throws a new <see cref="PlatformNotSupportedException"/>.
@@ -566,7 +602,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="PlatformNotSupportedException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowPlatformNotSupportedException(string? message, Exception? innerException) => throw new PlatformNotSupportedException(message, innerException);
+	public static void ThrowPlatformNotSupportedException(string? message, Exception? innerException)
+		=> throw new PlatformNotSupportedException(message, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="SynchronizationLockException"/>.
@@ -581,7 +618,8 @@ public static partial class ThrowHelper
 	/// <param name="message">The message to include in the exception.</param>
 	/// <exception cref="SynchronizationLockException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowSynchronizationLockException(string? message) => throw new SynchronizationLockException(message);
+	public static void ThrowSynchronizationLockException(string? message)
+		=> throw new SynchronizationLockException(message);
 
 	/// <summary>
 	/// Throws a new <see cref="SynchronizationLockException"/>.
@@ -590,7 +628,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="SynchronizationLockException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowSynchronizationLockException(string? message, Exception? innerException) => throw new SynchronizationLockException(message, innerException);
+	public static void ThrowSynchronizationLockException(string? message, Exception? innerException)
+		=> throw new SynchronizationLockException(message, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="TimeoutException"/>.
@@ -614,7 +653,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="TimeoutException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowTimeoutException(string? message, Exception? innerException) => throw new TimeoutException(message, innerException);
+	public static void ThrowTimeoutException(string? message, Exception? innerException)
+		=> throw new TimeoutException(message, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="UnauthorizedAccessException"/>.
@@ -629,7 +669,8 @@ public static partial class ThrowHelper
 	/// <param name="message">The message to include in the exception.</param>
 	/// <exception cref="UnauthorizedAccessException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowUnauthorizedAccessException(string? message) => throw new UnauthorizedAccessException(message);
+	public static void ThrowUnauthorizedAccessException(string? message)
+		=> throw new UnauthorizedAccessException(message);
 
 	/// <summary>
 	/// Throws a new <see cref="UnauthorizedAccessException"/>.
@@ -638,7 +679,8 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="UnauthorizedAccessException">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowUnauthorizedAccessException(string? message, Exception? innerException) => throw new UnauthorizedAccessException(message, innerException);
+	public static void ThrowUnauthorizedAccessException(string? message, Exception? innerException)
+		=> throw new UnauthorizedAccessException(message, innerException);
 
 	/// <summary>
 	/// Throws a new <see cref="Win32Exception"/>.
@@ -679,5 +721,6 @@ public static partial class ThrowHelper
 	/// <param name="innerException">The inner <see cref="Exception"/> to include.</param>
 	/// <exception cref="Win32Exception">Thrown with the specified parameter.</exception>
 	[DoesNotReturn]
-	public static void ThrowWin32Exception(string? message, Exception? innerException) => throw new Win32Exception(message, innerException);
+	public static void ThrowWin32Exception(string? message, Exception? innerException)
+		=> throw new Win32Exception(message, innerException);
 }

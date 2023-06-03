@@ -5,12 +5,14 @@
 // https://github.com/CommunityToolkit/dotnet/blob/main/CommunityToolkit.HighPerformance/Extensions/BoolExtensions.cs
 
 using System.Runtime.CompilerServices;
+using JetBrains.Annotations;
 
 namespace FisheryLib;
 
 /// <summary>
 /// Helpers for working with the <see cref="bool"/> type.
 /// </summary>
+[PublicAPI]
 public static class BoolExtensions
 {
 	/// <summary>
@@ -27,7 +29,7 @@ public static class BoolExtensions
 		// remove unwanted stack spills if the caller is using constant arguments. This is
 		// because taking the address of an argument can interfere with some of the flow
 		// analysis executed by the JIT, which can in some cases block constant propagation.
-		bool copy = flag;
+		var copy = flag;
 
 		return *(byte*)&copy;
 	}
@@ -49,10 +51,10 @@ public static class BoolExtensions
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static unsafe int ToBitwiseMask32(this bool flag)
 	{
-		bool copy = flag;
-		byte rangeFlag = *(byte*)&copy;
-		int negativeFlag = rangeFlag - 1;
-		int mask = ~negativeFlag;
+		var copy = flag;
+		var rangeFlag = *(byte*)&copy;
+		var negativeFlag = rangeFlag - 1;
+		var mask = ~negativeFlag;
 
 		return mask;
 	}
@@ -67,10 +69,10 @@ public static class BoolExtensions
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static unsafe long ToBitwiseMask64(this bool flag)
 	{
-		bool copy = flag;
-		byte rangeFlag = *(byte*)&copy;
-		long negativeFlag = (long)rangeFlag - 1;
-		long mask = ~negativeFlag;
+		var copy = flag;
+		var rangeFlag = *(byte*)&copy;
+		var negativeFlag = (long)rangeFlag - 1;
+		var mask = ~negativeFlag;
 
 		return mask;
 	}

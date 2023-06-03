@@ -7,23 +7,23 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 
 namespace FisheryLib;
+
 public static class Convert
 {
 	[Obsolete("Renamed to Convert.Type for clarity")]
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static unsafe TTo To<TFrom, TTo>(TFrom from) where TFrom : IConvertible
-		=> Type<TFrom, TTo>(from);
+	public static TTo To<TFrom, TTo>(TFrom from) => Type<TFrom, TTo>(from);
 
 	[Obsolete("Renamed to Convert.Type for clarity")]
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static unsafe TTo To<TFrom, TTo>(TFrom from, IFormatProvider provider) where TFrom : IConvertible
+	public static TTo To<TFrom, TTo>(TFrom from, IFormatProvider provider)
 		=> Type<TFrom, TTo>(from, provider);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static unsafe TTo Type<TFrom, TTo>(TFrom from) where TFrom : IConvertible
+	public static unsafe TTo Type<TFrom, TTo>(TFrom from)
 		=> FunctionPointers.Convert<TFrom>.To<TTo>.Default(from, CultureInfo.InvariantCulture);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static unsafe TTo Type<TFrom, TTo>(TFrom from, IFormatProvider provider) where TFrom : IConvertible
+	public static unsafe TTo Type<TFrom, TTo>(TFrom from, IFormatProvider provider)
 		=> FunctionPointers.Convert<TFrom>.To<TTo>.Default(from, provider);
 }

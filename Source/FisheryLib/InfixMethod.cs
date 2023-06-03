@@ -336,3 +336,4 @@ public class InfixReplaceAttribute : InfixAttribute
 		: base(new(NotNull(predicate), InfixTargetMode.Replace))
 	{ }
 }*/
+

@@ -6,6 +6,7 @@
 
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using JetBrains.Annotations;
 
 namespace FisheryLib;
 
@@ -14,6 +15,7 @@ namespace FisheryLib;
 /// </summary>
 /// <typeparam name="T">The type of items to enumerate.</typeparam>
 [EditorBrowsable(EditorBrowsableState.Never)]
+[PublicAPI]
 public ref struct SpanEnumerable<T>
 {
 	/// <summary>
@@ -58,12 +60,12 @@ public ref struct SpanEnumerable<T>
 	{
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		get
-			// On .NET Standard 2.1 and .NET Core (or on any target that offers runtime
-			// support for the Span<T> types), we can save 4 bytes by piggybacking the
-			// current index in the length of the wrapped span. We're going to use the
-			// first item as the target reference, and the length as a host for the
-			// current original offset. This is not possible on eg. .NET Standard 2.0,
-			// as we lack the API to create Span<T>-s from arbitrary references.
+		// On .NET Standard 2.1 and .NET Core (or on any target that offers runtime
+		// support for the Span<T> types), we can save 4 bytes by piggybacking the
+		// current index in the length of the wrapped span. We're going to use the
+		// first item as the target reference, and the length as a host for the
+		// current original offset. This is not possible on eg. .NET Standard 2.0,
+		// as we lack the API to create Span<T>-s from arbitrary references.
 			=> new(ref Unsafe.Add(ref _span.DangerousGetPinnableReference(), (nint)(uint)_index), _index);
 	}
 

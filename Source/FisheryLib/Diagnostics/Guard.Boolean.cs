@@ -20,9 +20,7 @@ public static partial class Guard
 	public static void IsTrue([DoesNotReturnIf(false)] bool value, [CallerArgumentExpression("value")] string name = "")
 	{
 		if (value)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsTrue(name);
 	}
@@ -38,9 +36,7 @@ public static partial class Guard
 	public static void IsTrue([DoesNotReturnIf(false)] bool value, string name, string message)
 	{
 		if (value)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsTrue(name, message);
 	}
@@ -55,9 +51,7 @@ public static partial class Guard
 	public static void IsFalse([DoesNotReturnIf(true)] bool value, [CallerArgumentExpression("value")] string name = "")
 	{
 		if (!value)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsFalse(name);
 	}
@@ -73,9 +67,7 @@ public static partial class Guard
 	public static void IsFalse([DoesNotReturnIf(true)] bool value, string name, string message)
 	{
 		if (!value)
-		{
 			return;
-		}
 
 		ThrowHelper.ThrowArgumentExceptionForIsFalse(name, message);
 	}
@@ -155,7 +147,8 @@ public static partial class Guard
             {
                 StringBuilder builder = new();
 
-                this.handler = new StringBuilder.AppendInterpolatedStringHandler(literalLength, formattedCount, builder);
+                this.handler =
+ new StringBuilder.AppendInterpolatedStringHandler(literalLength, formattedCount, builder);
                 this.builder = builder;
 
                 shouldAppend = true;
@@ -273,7 +266,8 @@ public static partial class Guard
             {
                 StringBuilder builder = new();
 
-                this.handler = new StringBuilder.AppendInterpolatedStringHandler(literalLength, formattedCount, builder);
+                this.handler =
+ new StringBuilder.AppendInterpolatedStringHandler(literalLength, formattedCount, builder);
                 this.builder = builder;
 
                 shouldAppend = true;

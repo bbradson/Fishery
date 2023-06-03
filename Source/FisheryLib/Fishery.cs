@@ -3,6 +3,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+//#define DEBUG
+
 global using System;
 global using System.Collections.Generic;
 global using System.Reflection;
@@ -11,11 +13,22 @@ global using FisheryLib.Utility.Diagnostics;
 global using CodeInstructions = System.Collections.Generic.IEnumerable<HarmonyLib.CodeInstruction>;
 using System.Security;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 [assembly: AllowPartiallyTrustedCallers]
-[assembly: SecurityTransparent]
 [assembly: SecurityRules(SecurityRuleSet.Level2, SkipVerificationInFullTrust = true)]
 [assembly: Debuggable(false, false)]
+
+[module: SkipLocalsInit]
+
+namespace FisheryLib;
+
+public static class FisheryLib
+{
+	public const decimal VERSION = 0.380085M;
+
+	public static decimal CurrentlyLoadedVersion { get; } = VERSION;
+}
 
 /*namespace FisheryLib;
 public class Fishery : Harmony

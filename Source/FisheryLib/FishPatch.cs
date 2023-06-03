@@ -336,3 +336,4 @@ public abstract class ClassWithFishPatches : IHasFishPatch
 	public virtual bool RequiresLoadedGameForPatching => false;
 	private FishPatchHolder? _patchHolder;
 }*/
+

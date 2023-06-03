@@ -5,12 +5,15 @@
 
 global using static FisheryLib.Aliases;
 using System.Runtime.CompilerServices;
+using JetBrains.Annotations;
 
 namespace FisheryLib;
 
+[PublicAPI]
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "alias")]
 public static class Aliases
 {
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	// ReSharper disable once InconsistentNaming
 	public static MethodInfo methodof(Delegate method) => method.Method;
 }

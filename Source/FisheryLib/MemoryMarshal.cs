@@ -7,10 +7,12 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace FisheryLib;
+
 /// <summary>
 /// Provides a collection of methods for interoperating with <see cref="Memory{T}"/>, <see cref="ReadOnlyMemory{T}"/>,
 /// <see cref="Span{T}"/>, and <see cref="ReadOnlySpan{T}"/>.
 /// </summary>
+#pragma warning disable CS8500
 internal static class MemoryMarshal
 {
 	/// <summary>
@@ -31,9 +33,8 @@ internal static class MemoryMarshal
 		if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
 			ThrowInvalidTypeWithPointersNotSupported(typeof(T));
 
-		return new Span<byte>(
-			Unsafe.AsPointer(ref GetReference(span)),
-			checked(span.Length * Unsafe.SizeOf<T>()));
+		return new(Unsafe.AsPointer(ref GetReference(span)),
+			checked(span.Length * sizeof(T)));
 	}
 
 	/// <summary>
@@ -54,9 +55,8 @@ internal static class MemoryMarshal
 		if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
 			ThrowInvalidTypeWithPointersNotSupported(typeof(T));
 
-		return new ReadOnlySpan<byte>(
-			Unsafe.AsPointer(ref GetReference(span)),
-			checked(span.Length * Unsafe.SizeOf<T>()));
+		return new(Unsafe.AsPointer(ref GetReference(span)),
+			checked(span.Length * sizeof(T)));
 	}
 
 	/// <summary>Creates a <see cref="Memory{T}"/> from a <see cref="ReadOnlyMemory{T}"/>.</summary>
@@ -69,8 +69,8 @@ internal static class MemoryMarshal
 	/// as <see cref="Memory{T}"/> but only used for reading to store a <see cref="ReadOnlyMemory{T}"/>.
 	/// </remarks>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static Memory<T> AsMemory<T>(ReadOnlyMemory<T> memory) =>
-		Unsafe.As<ReadOnlyMemory<T>, Memory<T>>(ref memory);
+	public static Memory<T> AsMemory<T>(ReadOnlyMemory<T> memory)
+		=> Unsafe.As<ReadOnlyMemory<T>, Memory<T>>(ref memory);
 
 	/// <summary>
 	/// Returns a reference to the 0th element of the Span. If the Span is empty, returns a reference to the location where the 0th element
@@ -91,14 +91,16 @@ internal static class MemoryMarshal
 	/// for pinning but must never be dereferenced. This is useful for interop with methods that do not accept null pointers for zero-sized buffers.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal static unsafe ref T GetNonNullPinnableReference<T>(Span<T> span) => ref (span.Length != 0) ? ref span.DangerousGetPinnableReference() : ref Unsafe.AsRef<T>((void*)1);
+	internal static unsafe ref T GetNonNullPinnableReference<T>(Span<T> span)
+		=> ref span.Length != 0 ? ref span.DangerousGetPinnableReference() : ref Unsafe.AsRef<T>((void*)1);
 
 	/// <summary>
 	/// Returns a reference to the 0th element of the ReadOnlySpan. If the ReadOnlySpan is empty, returns a reference to fake non-null pointer. Such a reference
 	/// can be used for pinning but must never be dereferenced. This is useful for interop with methods that do not accept null pointers for zero-sized buffers.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal static unsafe ref T GetNonNullPinnableReference<T>(ReadOnlySpan<T> span) => ref (span.Length != 0) ? ref span.DangerousGetPinnableReference() : ref Unsafe.AsRef<T>((void*)1);
+	internal static unsafe ref T GetNonNullPinnableReference<T>(ReadOnlySpan<T> span)
+		=> ref span.Length != 0 ? ref span.DangerousGetPinnableReference() : ref Unsafe.AsRef<T>((void*)1);
 
 	/// <summary>
 	/// Casts a Span of one primitive type <typeparamref name="TFrom"/> to another primitive type <typeparamref name="TTo"/>.
@@ -112,7 +114,7 @@ internal static class MemoryMarshal
 	/// Thrown when <typeparamref name="TFrom"/> or <typeparamref name="TTo"/> contains pointers.
 	/// </exception>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static Span<TTo> Cast<TFrom, TTo>(Span<TFrom> span)
+	public static unsafe Span<TTo> Cast<TFrom, TTo>(Span<TFrom> span)
 		where TFrom : struct
 		where TTo : struct
 	{
@@ -123,8 +125,8 @@ internal static class MemoryMarshal
 
 		// Use unsigned integers - unsigned division by constant (especially by power of 2)
 		// and checked casts are faster and smaller.
-		var fromSize = (uint)Unsafe.SizeOf<TFrom>();
-		var toSize = (uint)Unsafe.SizeOf<TTo>();
+		var fromSize = (uint)sizeof(TFrom);
+		var toSize = (uint)sizeof(TTo);
 		var fromLength = (uint)span.Length;
 		int toLength;
 		if (fromSize == toSize)
@@ -146,16 +148,11 @@ internal static class MemoryMarshal
 			// Ensure that casts are done in such a way that the JIT is able to "see"
 			// the uint->ulong casts and the multiply together so that on 32 bit targets
 			// 32x32to64 multiplication is used.
-			var toLengthUInt64 = (ulong)fromLength * (ulong)fromSize / (ulong)toSize;
+			var toLengthUInt64 = (ulong)fromLength * fromSize / toSize;
 			toLength = checked((int)toLengthUInt64);
 		}
 
-		unsafe
-		{
-			return new Span<TTo>(
-				Unsafe.AsPointer(ref span.DangerousGetPinnableReference()),
-				toLength);
-		}
+		return new(Unsafe.AsPointer(ref span.DangerousGetPinnableReference()), toLength);
 	}
 
 	/// <summary>
@@ -170,7 +167,7 @@ internal static class MemoryMarshal
 	/// Thrown when <typeparamref name="TFrom"/> or <typeparamref name="TTo"/> contains pointers.
 	/// </exception>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static ReadOnlySpan<TTo> Cast<TFrom, TTo>(ReadOnlySpan<TFrom> span)
+	public static unsafe ReadOnlySpan<TTo> Cast<TFrom, TTo>(ReadOnlySpan<TFrom> span)
 		where TFrom : struct
 		where TTo : struct
 	{
@@ -181,8 +178,8 @@ internal static class MemoryMarshal
 
 		// Use unsigned integers - unsigned division by constant (especially by power of 2)
 		// and checked casts are faster and smaller.
-		var fromSize = (uint)Unsafe.SizeOf<TFrom>();
-		var toSize = (uint)Unsafe.SizeOf<TTo>();
+		var fromSize = (uint)sizeof(TFrom);
+		var toSize = (uint)sizeof(TTo);
 		var fromLength = (uint)span.Length;
 		int toLength;
 		if (fromSize == toSize)
@@ -204,15 +201,11 @@ internal static class MemoryMarshal
 			// Ensure that casts are done in such a way that the JIT is able to "see"
 			// the uint->ulong casts and the multiply together so that on 32 bit targets
 			// 32x32to64 multiplication is used.
-			var toLengthUInt64 = (ulong)fromLength * (ulong)fromSize / (ulong)toSize;
+			var toLengthUInt64 = (ulong)fromLength * fromSize / toSize;
 			toLength = checked((int)toLengthUInt64);
 		}
-		unsafe
-		{
-			return new ReadOnlySpan<TTo>(
-				Unsafe.AsPointer(ref GetReference(span)),
-				toLength);
-		}
+
+		return new(Unsafe.AsPointer(ref GetReference(span)), toLength);
 	}
 
 	/// <summary>
@@ -225,7 +218,8 @@ internal static class MemoryMarshal
 	/// <returns>A span representing the specified reference and length.</returns>
 	/// <remarks>The lifetime of the returned span will not be validated for safety by span-aware languages.</remarks>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static unsafe Span<T> CreateSpan<T>(ref T reference, int length) => new(Unsafe.AsPointer(ref reference), length);
+	public static unsafe Span<T> CreateSpan<T>(ref T reference, int length)
+		=> new(Unsafe.AsPointer(ref reference), length);
 
 	/// <summary>
 	/// Creates a new read-only span over a portion of a regular managed object. This can be useful
@@ -237,7 +231,8 @@ internal static class MemoryMarshal
 	/// <returns>A read-only span representing the specified reference and length.</returns>
 	/// <remarks>The lifetime of the returned span will not be validated for safety by span-aware languages.</remarks>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static unsafe ReadOnlySpan<T> CreateReadOnlySpan<T>(ref T reference, int length) => new(Unsafe.AsPointer(ref reference), length);
+	public static unsafe ReadOnlySpan<T> CreateReadOnlySpan<T>(ref T reference, int length)
+		=> new(Unsafe.AsPointer(ref reference), length);
 
 	/*
 	/// <summary>Creates a new read-only span for a null-terminated string.</summary>
@@ -408,17 +403,13 @@ internal static class MemoryMarshal
 	/// Reads a structure of type T out of a read-only span of bytes.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static T Read<T>(ReadOnlySpan<byte> source)
+	public static unsafe T Read<T>(ReadOnlySpan<byte> source)
 		where T : struct
 	{
 		if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
-		{
 			ThrowInvalidTypeWithPointersNotSupported(typeof(T));
-		}
-		if (Unsafe.SizeOf<T>() > source.Length)
-		{
+		if (sizeof(T) > source.Length)
 			ThrowHelper.ThrowArgumentOutOfRangeException();
-		}
 		return Unsafe.ReadUnaligned<T>(ref GetReference(source));
 	}
 
@@ -427,18 +418,17 @@ internal static class MemoryMarshal
 	/// <returns>If the span is too small to contain the type T, return false.</returns>
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool TryRead<T>(ReadOnlySpan<byte> source, out T value)
+	public static unsafe bool TryRead<T>(ReadOnlySpan<byte> source, out T value)
 		where T : struct
 	{
 		if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
-		{
 			ThrowInvalidTypeWithPointersNotSupported(typeof(T));
-		}
-		if (Unsafe.SizeOf<T>() > (uint)source.Length)
+		if (sizeof(T) > (uint)source.Length)
 		{
 			value = default;
 			return false;
 		}
+
 		value = Unsafe.ReadUnaligned<T>(ref GetReference(source));
 		return true;
 	}
@@ -447,18 +437,14 @@ internal static class MemoryMarshal
 	/// Writes a structure of type T into a span of bytes.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void Write<T>(Span<byte> destination, ref T value)
+	public static unsafe void Write<T>(Span<byte> destination, ref T value)
 		where T : struct
 	{
 		if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
-		{
 			ThrowInvalidTypeWithPointersNotSupported(typeof(T));
-		}
-		if ((uint)Unsafe.SizeOf<T>() > (uint)destination.Length)
-		{
+		if ((uint)sizeof(T) > (uint)destination.Length)
 			ThrowHelper.ThrowArgumentOutOfRangeException();
-		}
-		Unsafe.WriteUnaligned<T>(ref GetReference(destination), value);
+		Unsafe.WriteUnaligned(ref GetReference(destination), value);
 	}
 
 	/// <summary>
@@ -466,17 +452,14 @@ internal static class MemoryMarshal
 	/// <returns>If the span is too small to contain the type T, return false.</returns>
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool TryWrite<T>(Span<byte> destination, ref T value)
+	public static unsafe bool TryWrite<T>(Span<byte> destination, ref T value)
 		where T : struct
 	{
 		if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
-		{
 			ThrowInvalidTypeWithPointersNotSupported(typeof(T));
-		}
-		if (Unsafe.SizeOf<T>() > (uint)destination.Length)
-		{
+		if (sizeof(T) > (uint)destination.Length)
 			return false;
-		}
+
 		Unsafe.WriteUnaligned(ref GetReference(destination), value);
 		return true;
 	}
@@ -489,17 +472,13 @@ internal static class MemoryMarshal
 	/// Supported only for platforms that support misaligned memory access or when the memory block is aligned by other means.
 	/// </remarks>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static ref T AsRef<T>(Span<byte> span)
+	public static unsafe ref T AsRef<T>(Span<byte> span)
 		where T : struct
 	{
 		if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
-		{
 			ThrowInvalidTypeWithPointersNotSupported(typeof(T));
-		}
-		if (Unsafe.SizeOf<T>() > (uint)span.Length)
-		{
+		if (sizeof(T) > (uint)span.Length)
 			ThrowHelper.ThrowArgumentOutOfRangeException();
-		}
 		return ref Unsafe.As<byte, T>(ref GetReference(span));
 	}
 
@@ -511,17 +490,13 @@ internal static class MemoryMarshal
 	/// Supported only for platforms that support misaligned memory access or when the memory block is aligned by other means.
 	/// </remarks>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static ref readonly T AsRef<T>(ReadOnlySpan<byte> span)
+	public static unsafe ref readonly T AsRef<T>(ReadOnlySpan<byte> span)
 		where T : struct
 	{
 		if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
-		{
 			ThrowInvalidTypeWithPointersNotSupported(typeof(T));
-		}
-		if (Unsafe.SizeOf<T>() > (uint)span.Length)
-		{
+		if (sizeof(T) > (uint)span.Length)
 			ThrowHelper.ThrowArgumentOutOfRangeException();
-		}
 		return ref Unsafe.As<byte, T>(ref GetReference(span));
 	}
 
@@ -549,15 +524,19 @@ internal static class MemoryMarshal
 				ThrowHelper.ThrowArgumentOutOfRangeException();
 			return default;
 		}
+
 		if (!typeof(T).IsValueType && array.GetType() != typeof(T[]))
 			ThrowHelper.ThrowArrayTypeMismatchException();
 		if ((uint)start > (uint)array.Length || (uint)length > (uint)(array.Length - start))
 			ThrowHelper.ThrowArgumentOutOfRangeException();
 
 		// Before using _index, check if _index < 0, then 'and' it with RemoveFlagsBitMask
-		return new Memory<T>(/*(object)*/array, start | (1 << 31), length);
+		return new( /*(object)*/array, start | (1 << 31), length);
 	}
+
 	[DoesNotReturn]
 	private static void ThrowInvalidTypeWithPointersNotSupported(Type targetType)
-		=> throw new ArgumentException($"Cannot use type '{targetType}'.Only value types without pointers or references are supported.");
+		=> throw new ArgumentException(
+			$"Cannot use type '{targetType}'.Only value types without pointers or references are supported.");
 }
+#pragma warning restore CS8500

@@ -1,18 +1,21 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using UnityEngine;
+// ReSharper disable PossibleUnintendedReferenceComparison
 
 namespace FisheryLib;
+
 #region ArraySortHelper for single arrays
 
+#pragma warning disable CS8500
 internal sealed class ArraySortHelper<T> : IArraySortHelper<T>
 {
 	public static IArraySortHelper<T> Default { get; } = CreateArraySortHelper();
 
 	private static IArraySortHelper<T> CreateArraySortHelper()
 		=> typeof(IComparable<T>).IsAssignableFrom(typeof(T))
-		? (IArraySortHelper<T>)Activator.CreateInstance(typeof(GenericArraySortHelper<>).MakeGenericType(typeof(T)))
-		: new ArraySortHelper<T>();
+			? (IArraySortHelper<T>)Activator.CreateInstance(typeof(GenericArraySortHelper<>).MakeGenericType(typeof(T)))
+			: new ArraySortHelper<T>();
 
 	#region IArraySortHelper<T> Members
 
@@ -61,9 +64,7 @@ internal sealed class ArraySortHelper<T> : IArraySortHelper<T>
 		Debug.Assert(i != j);
 
 		if (comparer(keys[i], keys[j]) > 0)
-		{
 			(keys[j], keys[i]) = (keys[i], keys[j]);
-		}
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -79,9 +80,7 @@ internal sealed class ArraySortHelper<T> : IArraySortHelper<T>
 		Debug.Assert(comparer != null);
 
 		if (keys.Length > 1)
-		{
 			IntroSort(keys, 2 * (BitOperations.Log2((uint)keys.Length) + 1), comparer!);
-		}
 	}
 
 	private static void IntroSort(Span<T> keys, int depthLimit, Comparison<T> comparer)
@@ -95,7 +94,6 @@ internal sealed class ArraySortHelper<T> : IArraySortHelper<T>
 		{
 			if (partitionSize <= SortUtils.INTROSORT_SIZE_THRESHOLD)
 			{
-
 				if (partitionSize == 2)
 				{
 					SwapIfGreater(keys, comparer!, 0, 1);
@@ -119,6 +117,7 @@ internal sealed class ArraySortHelper<T> : IArraySortHelper<T>
 				HeapSort(keys[..partitionSize], comparer!);
 				return;
 			}
+
 			depthLimit--;
 
 			var p = PickPivotAndPartition(keys[..partitionSize], comparer!);
@@ -141,12 +140,14 @@ internal sealed class ArraySortHelper<T> : IArraySortHelper<T>
 
 		// Sort lo, mid and hi appropriately, then pick mid as the pivot.
 		SwapIfGreater(keys, comparer!, 0, middle);  // swap the low with the mid point
-		SwapIfGreater(keys, comparer!, 0, hi);   // swap the low with the high
+		SwapIfGreater(keys, comparer!, 0, hi);      // swap the low with the high
 		SwapIfGreater(keys, comparer!, middle, hi); // swap the middle with the high
 
 		var pivot = keys[middle];
 		Swap(keys, middle, hi - 1);
-		int left = 0, right = hi - 1;  // We already partitioned lo and hi and put the pivot in hi - 1.  And we pre-increment & decrement below.
+		int left = 0,
+			right = hi
+				- 1; // We already partitioned lo and hi and put the pivot in hi - 1.  And we pre-increment & decrement below.
 
 		while (left < right)
 		{
@@ -163,9 +164,7 @@ internal sealed class ArraySortHelper<T> : IArraySortHelper<T>
 
 		// Put pivot in the right location.
 		if (left != hi - 1)
-		{
 			Swap(keys, left, hi - 1);
-		}
 		return left;
 	}
 
@@ -176,9 +175,7 @@ internal sealed class ArraySortHelper<T> : IArraySortHelper<T>
 
 		var n = keys.Length;
 		for (var i = n >> 1; i >= 1; i--)
-		{
 			DownHeap(keys, i, n, comparer!);
-		}
 
 		for (var i = n; i > 1; i--)
 		{
@@ -196,9 +193,7 @@ internal sealed class ArraySortHelper<T> : IArraySortHelper<T>
 		{
 			var child = 2 * i;
 			if (child < n && comparer!(keys[child - 1], keys[child]) < 0)
-			{
 				child++;
-			}
 
 			if (!(comparer!(d, keys[child - 1]) < 0))
 				break;
@@ -241,29 +236,25 @@ internal sealed class GenericArraySortHelper<T> : IArraySortHelper<T>
 		{
 			if (comparer == null || comparer == Comparer<T>.Default)
 			{
-				if (keys.Length > 1)
-				{
-					// For floating-point, do a pre-pass to move all NaNs to the beginning
-					// so that we can do an optimized comparison as part of the actual sort
-					// on the remainder of the values.
-					if (typeof(T) == typeof(double) ||
-						typeof(T) == typeof(float))
-					{
-						var nanLeft = SortUtils.MoveNansToFront(keys, default(Span<byte>));
-						if (nanLeft == keys.Length)
-						{
-							return;
-						}
-						keys = keys[nanLeft..];
-					}
+				if (keys.Length <= 1)
+					return;
 
-					IntroSort(keys, 2 * (BitOperations.Log2((uint)keys.Length) + 1));
+				// For floating-point, do a pre-pass to move all NaNs to the beginning
+				// so that we can do an optimized comparison as part of the actual sort
+				// on the remainder of the values.
+				if (typeof(T) == typeof(double) || typeof(T) == typeof(float))
+				{
+					var nanLeft = SortUtils.MoveNansToFront(keys, default(Span<byte>));
+					if (nanLeft == keys.Length)
+						return;
+
+					keys = keys[nanLeft..];
 				}
+
+				IntroSort(keys, 2 * (BitOperations.Log2((uint)keys.Length) + 1));
 			}
 			else
-			{
 				ArraySortHelper<T>.IntrospectiveSort(keys, comparer.Compare);
-			}
 		}
 		catch (IndexOutOfRangeException)
 		{
@@ -279,12 +270,10 @@ internal sealed class GenericArraySortHelper<T> : IArraySortHelper<T>
 
 	/// <summary>Swaps the values in the two references if the first is greater than the second.</summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static void SwapIfGreater(ref T i, ref T j)
+	private static void SwapIfGreater([AllowNull] ref T i, ref T j)
 	{
 		if (i != null && GreaterThan(ref i, ref j))
-		{
 			Swap(ref i, ref j);
-		}
 	}
 
 	/// <summary>Swaps the values in the two references, regardless of whether the two references are the same.</summary>
@@ -333,6 +322,7 @@ internal sealed class GenericArraySortHelper<T> : IArraySortHelper<T>
 				HeapSort(keys[..partitionSize]);
 				return;
 			}
+
 			depthLimit--;
 
 			var p = PickPivotAndPartition(keys[..partitionSize]);
@@ -343,7 +333,7 @@ internal sealed class GenericArraySortHelper<T> : IArraySortHelper<T>
 		}
 	}
 
-	private static int PickPivotAndPartition(Span<T> keys)
+	private static unsafe int PickPivotAndPartition(Span<T> keys)
 	{
 		Debug.Assert(keys.Length >= SortUtils.INTROSORT_SIZE_THRESHOLD);
 
@@ -361,38 +351,39 @@ internal sealed class GenericArraySortHelper<T> : IArraySortHelper<T>
 		Swap(ref middleRef, ref nextToLastRef);
 
 		// Walk the left and right pointers, swapping elements as necessary, until they cross.
+		// ReSharper disable once RedundantSuppressNullableWarningExpression
 		ref T leftRef = ref zeroRef!, rightRef = ref nextToLastRef!;
 		while (Unsafe.IsAddressLessThan(ref leftRef, ref rightRef))
 		{
 			if (pivot == null)
 			{
-				while (Unsafe.IsAddressLessThan(ref leftRef!, ref nextToLastRef) && (leftRef = ref Unsafe.Add(ref leftRef, 1)) == null)
+				while (Unsafe.IsAddressLessThan(ref leftRef!, ref nextToLastRef)
+					&& (leftRef = ref Unsafe.Add(ref leftRef, 1)) == null)
 					;
-				while (Unsafe.IsAddressGreaterThan(ref rightRef, ref zeroRef) && (rightRef = ref Unsafe.Add(ref rightRef, -1)) != null)
+				while (Unsafe.IsAddressGreaterThan(ref rightRef, ref zeroRef)
+					&& (rightRef = ref Unsafe.Add(ref rightRef, -1)) != null)
 					;
 			}
 			else
 			{
-				while (Unsafe.IsAddressLessThan(ref leftRef, ref nextToLastRef) && GreaterThan(ref pivot, ref leftRef = ref Unsafe.Add(ref leftRef, 1)))
+				while (Unsafe.IsAddressLessThan(ref leftRef, ref nextToLastRef)
+					&& GreaterThan(ref pivot, ref leftRef = ref Unsafe.Add(ref leftRef, 1)))
 					;
-				while (Unsafe.IsAddressGreaterThan(ref rightRef, ref zeroRef) && LessThan(ref pivot, ref rightRef = ref Unsafe.Add(ref rightRef, -1)))
+				while (Unsafe.IsAddressGreaterThan(ref rightRef, ref zeroRef)
+					&& LessThan(ref pivot, ref rightRef = ref Unsafe.Add(ref rightRef, -1)))
 					;
 			}
 
 			if (!Unsafe.IsAddressLessThan(ref leftRef, ref rightRef!))
-			{
 				break;
-			}
 
 			Swap(ref leftRef, ref rightRef);
 		}
 
 		// Put the pivot in the correct location.
 		if (!Unsafe.AreSame(ref leftRef, ref nextToLastRef))
-		{
 			Swap(ref leftRef, ref nextToLastRef);
-		}
-		return (int)((nint)Unsafe.ByteOffset(ref zeroRef, ref leftRef) / Unsafe.SizeOf<T>());
+		return (int)((nint)Unsafe.ByteOffset(ref zeroRef, ref leftRef) / sizeof(T));
 	}
 
 	private static void HeapSort(Span<T> keys)
@@ -401,9 +392,7 @@ internal sealed class GenericArraySortHelper<T> : IArraySortHelper<T>
 
 		var n = keys.Length;
 		for (var i = n >> 1; i >= 1; i--)
-		{
 			DownHeap(keys, i, n);
-		}
 
 		for (var i = n; i > 1; i--)
 		{
@@ -419,9 +408,7 @@ internal sealed class GenericArraySortHelper<T> : IArraySortHelper<T>
 		{
 			var child = 2 * i;
 			if (child < n && (keys[child - 1] == null || LessThan(ref keys[child - 1], ref keys[child])))
-			{
 				child++;
-			}
 
 			if (keys[child - 1] == null || !LessThan(ref d, ref keys[child - 1]))
 				break;
@@ -442,7 +429,8 @@ internal sealed class GenericArraySortHelper<T> : IArraySortHelper<T>
 			var j = i;
 			while (j >= 0 && (t == null || LessThan(ref t, ref Unsafe.Add(ref MemoryMarshal.GetReference(keys), j))))
 			{
-				Unsafe.Add(ref MemoryMarshal.GetReference(keys), j + 1) = Unsafe.Add(ref MemoryMarshal.GetReference(keys), j);
+				Unsafe.Add(ref MemoryMarshal.GetReference(keys), j + 1)
+					= Unsafe.Add(ref MemoryMarshal.GetReference(keys), j);
 				j--;
 			}
 
@@ -460,58 +448,34 @@ internal sealed class GenericArraySortHelper<T> : IArraySortHelper<T>
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)] // compiles to a single comparison or method call
 	private static bool LessThan(ref T left, ref T right)
-		=> typeof(T) == typeof(byte)
-		? (byte)(object)left < (byte)(object)right
-		: typeof(T) == typeof(sbyte)
-		? (sbyte)(object)left < (sbyte)(object)right
-		: typeof(T) == typeof(ushort)
-		? (ushort)(object)left < (ushort)(object)right
-		: typeof(T) == typeof(short)
-		? (short)(object)left < (short)(object)right
-		: typeof(T) == typeof(uint)
-		? (uint)(object)left < (uint)(object)right
-		: typeof(T) == typeof(int)
-		? (int)(object)left < (int)(object)right
-		: typeof(T) == typeof(ulong)
-		? (ulong)(object)left < (ulong)(object)right
-		: typeof(T) == typeof(long)
-		? (long)(object)left < (long)(object)right
-		: typeof(T) == typeof(nuint)
-		? (nuint)(object)left < (nuint)(object)right
-		: typeof(T) == typeof(nint)
-		? (nint)(object)left < (nint)(object)right
-		: typeof(T) == typeof(float)
-		? (float)(object)left < (float)(object)right
-		: typeof(T) == typeof(double)
-		? (double)(object)left < (double)(object)right
+		=> typeof(T) == typeof(byte) ? (byte)(object)left < (byte)(object)right
+		: typeof(T) == typeof(sbyte) ? (sbyte)(object)left < (sbyte)(object)right
+		: typeof(T) == typeof(ushort) ? (ushort)(object)left < (ushort)(object)right
+		: typeof(T) == typeof(short) ? (short)(object)left < (short)(object)right
+		: typeof(T) == typeof(uint) ? (uint)(object)left < (uint)(object)right
+		: typeof(T) == typeof(int) ? (int)(object)left < (int)(object)right
+		: typeof(T) == typeof(ulong) ? (ulong)(object)left < (ulong)(object)right
+		: typeof(T) == typeof(long) ? (long)(object)left < (long)(object)right
+		: typeof(T) == typeof(nuint) ? (nuint)(object)left < (nuint)(object)right
+		: typeof(T) == typeof(nint) ? (nint)(object)left < (nint)(object)right
+		: typeof(T) == typeof(float) ? (float)(object)left < (float)(object)right
+		: typeof(T) == typeof(double) ? (double)(object)left < (double)(object)right
 		: left.CompareTo(right) < 0;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)] // compiles to a single comparison or method call
 	private static bool GreaterThan(ref T left, ref T right)
-		=> typeof(T) == typeof(byte)
-		? (byte)(object)left > (byte)(object)right
-		: typeof(T) == typeof(sbyte)
-		? (sbyte)(object)left > (sbyte)(object)right
-		: typeof(T) == typeof(ushort)
-		? (ushort)(object)left > (ushort)(object)right
-		: typeof(T) == typeof(short)
-		? (short)(object)left > (short)(object)right
-		: typeof(T) == typeof(uint)
-		? (uint)(object)left > (uint)(object)right
-		: typeof(T) == typeof(int)
-		? (int)(object)left > (int)(object)right
-		: typeof(T) == typeof(ulong)
-		? (ulong)(object)left > (ulong)(object)right
-		: typeof(T) == typeof(long)
-		? (long)(object)left > (long)(object)right
-		: typeof(T) == typeof(nuint)
-		? (nuint)(object)left > (nuint)(object)right
-		: typeof(T) == typeof(nint)
-		? (nint)(object)left > (nint)(object)right
-		: typeof(T) == typeof(float)
-		? (float)(object)left > (float)(object)right
-		: typeof(T) == typeof(double)
-		? (double)(object)left > (double)(object)right
+		=> typeof(T) == typeof(byte) ? (byte)(object)left > (byte)(object)right
+		: typeof(T) == typeof(sbyte) ? (sbyte)(object)left > (sbyte)(object)right
+		: typeof(T) == typeof(ushort) ? (ushort)(object)left > (ushort)(object)right
+		: typeof(T) == typeof(short) ? (short)(object)left > (short)(object)right
+		: typeof(T) == typeof(uint) ? (uint)(object)left > (uint)(object)right
+		: typeof(T) == typeof(int) ? (int)(object)left > (int)(object)right
+		: typeof(T) == typeof(ulong) ? (ulong)(object)left > (ulong)(object)right
+		: typeof(T) == typeof(long) ? (long)(object)left > (long)(object)right
+		: typeof(T) == typeof(nuint) ? (nuint)(object)left > (nuint)(object)right
+		: typeof(T) == typeof(nint) ? (nint)(object)left > (nint)(object)right
+		: typeof(T) == typeof(float) ? (float)(object)left > (float)(object)right
+		: typeof(T) == typeof(double) ? (double)(object)left > (double)(object)right 
 		: left.CompareTo(right) > 0;
 }
 
@@ -525,8 +489,9 @@ internal sealed class ArraySortHelper<TKey, TValue> : IArraySortHelper<TKey, TVa
 
 	private static IArraySortHelper<TKey, TValue> CreateArraySortHelper()
 		=> typeof(IComparable<TKey>).IsAssignableFrom(typeof(TKey))
-		? (IArraySortHelper<TKey, TValue>)Activator.CreateInstance(typeof(GenericArraySortHelper<,>).MakeGenericType(typeof(TKey), typeof(TValue)))
-		: new ArraySortHelper<TKey, TValue>();
+			? (IArraySortHelper<TKey, TValue>)Activator.CreateInstance(
+				typeof(GenericArraySortHelper<,>).MakeGenericType(typeof(TKey), typeof(TValue)))
+			: new ArraySortHelper<TKey, TValue>();
 
 	public void Sort(Span<TKey> keys, Span<TValue> values, IComparer<TKey>? comparer)
 	{
@@ -546,19 +511,20 @@ internal sealed class ArraySortHelper<TKey, TValue> : IArraySortHelper<TKey, TVa
 		}
 	}
 
-	private static void SwapIfGreaterWithValues(Span<TKey> keys, Span<TValue> values, IComparer<TKey> comparer, int i, int j)
+	private static void SwapIfGreaterWithValues(Span<TKey> keys, Span<TValue> values, IComparer<TKey> comparer, int i,
+		int j)
 	{
 		Debug.Assert(comparer != null);
 		Debug.Assert(0 <= i && i < keys.Length && i < values.Length);
 		Debug.Assert(0 <= j && j < keys.Length && j < values.Length);
 		Debug.Assert(i != j);
 
-		if (comparer!.Compare(keys[i], keys[j]) > 0)
-		{
-			(keys[j], keys[i]) = (keys[i], keys[j]);
+		if (comparer!.Compare(keys[i], keys[j]) <= 0)
+			return;
 
-			(values[j], values[i]) = (values[i], values[j]);
-		}
+		(keys[j], keys[i]) = (keys[i], keys[j]);
+
+		(values[j], values[i]) = (values[i], values[j]);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -577,9 +543,7 @@ internal sealed class ArraySortHelper<TKey, TValue> : IArraySortHelper<TKey, TVa
 		Debug.Assert(keys.Length == values.Length);
 
 		if (keys.Length > 1)
-		{
 			IntroSort(keys, values, 2 * (BitOperations.Log2((uint)keys.Length) + 1), comparer!);
-		}
 	}
 
 	public static void IntroSort(Span<TKey> keys, Span<TValue> values, int depthLimit, IComparer<TKey> comparer)
@@ -594,7 +558,6 @@ internal sealed class ArraySortHelper<TKey, TValue> : IArraySortHelper<TKey, TVa
 		{
 			if (partitionSize <= SortUtils.INTROSORT_SIZE_THRESHOLD)
 			{
-
 				if (partitionSize == 2)
 				{
 					SwapIfGreaterWithValues(keys, values, comparer!, 0, 1);
@@ -618,6 +581,7 @@ internal sealed class ArraySortHelper<TKey, TValue> : IArraySortHelper<TKey, TVa
 				HeapSort(keys[..partitionSize], values[..partitionSize], comparer!);
 				return;
 			}
+
 			depthLimit--;
 
 			var p = PickPivotAndPartition(keys[..partitionSize], values[..partitionSize], comparer!);
@@ -640,12 +604,14 @@ internal sealed class ArraySortHelper<TKey, TValue> : IArraySortHelper<TKey, TVa
 
 		// Sort lo, mid and hi appropriately, then pick mid as the pivot.
 		SwapIfGreaterWithValues(keys, values, comparer!, 0, middle);  // swap the low with the mid point
-		SwapIfGreaterWithValues(keys, values, comparer!, 0, hi);   // swap the low with the high
+		SwapIfGreaterWithValues(keys, values, comparer!, 0, hi);      // swap the low with the high
 		SwapIfGreaterWithValues(keys, values, comparer!, middle, hi); // swap the middle with the high
 
 		var pivot = keys[middle];
 		Swap(keys, values, middle, hi - 1);
-		int left = 0, right = hi - 1;  // We already partitioned lo and hi and put the pivot in hi - 1.  And we pre-increment & decrement below.
+		int left = 0,
+			right = hi
+				- 1; // We already partitioned lo and hi and put the pivot in hi - 1.  And we pre-increment & decrement below.
 
 		while (left < right)
 		{
@@ -662,9 +628,7 @@ internal sealed class ArraySortHelper<TKey, TValue> : IArraySortHelper<TKey, TVa
 
 		// Put pivot in the right location.
 		if (left != hi - 1)
-		{
 			Swap(keys, values, left, hi - 1);
-		}
 		return left;
 	}
 
@@ -675,9 +639,7 @@ internal sealed class ArraySortHelper<TKey, TValue> : IArraySortHelper<TKey, TVa
 
 		var n = keys.Length;
 		for (var i = n >> 1; i >= 1; i--)
-		{
 			DownHeap(keys, values, i, n, comparer!);
-		}
 
 		for (var i = n; i > 1; i--)
 		{
@@ -697,9 +659,7 @@ internal sealed class ArraySortHelper<TKey, TValue> : IArraySortHelper<TKey, TVa
 		{
 			var child = 2 * i;
 			if (child < n && comparer!.Compare(keys[child - 1], keys[child]) < 0)
-			{
 				child++;
-			}
 
 			if (!(comparer!.Compare(d, keys[child - 1]) < 0))
 				break;
@@ -752,14 +712,12 @@ internal sealed class GenericArraySortHelper<TKey, TValue> : IArraySortHelper<TK
 					// For floating-point, do a pre-pass to move all NaNs to the beginning
 					// so that we can do an optimized comparison as part of the actual sort
 					// on the remainder of the values.
-					if (typeof(TKey) == typeof(double) ||
-						typeof(TKey) == typeof(float))
+					if (typeof(TKey) == typeof(double) || typeof(TKey) == typeof(float))
 					{
 						var nanLeft = SortUtils.MoveNansToFront(keys, values);
 						if (nanLeft == keys.Length)
-						{
 							return;
-						}
+
 						keys = keys[nanLeft..];
 						values = values[nanLeft..];
 					}
@@ -768,9 +726,7 @@ internal sealed class GenericArraySortHelper<TKey, TValue> : IArraySortHelper<TK
 				}
 			}
 			else
-			{
 				ArraySortHelper<TKey, TValue>.IntrospectiveSort(keys, values, comparer);
-			}
 		}
 		catch (IndexOutOfRangeException)
 		{
@@ -818,7 +774,6 @@ internal sealed class GenericArraySortHelper<TKey, TValue> : IArraySortHelper<TK
 		{
 			if (partitionSize <= SortUtils.INTROSORT_SIZE_THRESHOLD)
 			{
-
 				if (partitionSize == 2)
 				{
 					SwapIfGreaterWithValues(keys, values, 0, 1);
@@ -842,6 +797,7 @@ internal sealed class GenericArraySortHelper<TKey, TValue> : IArraySortHelper<TK
 				HeapSort(keys[..partitionSize], values[..partitionSize]);
 				return;
 			}
+
 			depthLimit--;
 
 			var p = PickPivotAndPartition(keys[..partitionSize], values[..partitionSize]);
@@ -863,18 +819,20 @@ internal sealed class GenericArraySortHelper<TKey, TValue> : IArraySortHelper<TK
 
 		// Sort lo, mid and hi appropriately, then pick mid as the pivot.
 		SwapIfGreaterWithValues(keys, values, 0, middle);  // swap the low with the mid point
-		SwapIfGreaterWithValues(keys, values, 0, hi);   // swap the low with the high
+		SwapIfGreaterWithValues(keys, values, 0, hi);      // swap the low with the high
 		SwapIfGreaterWithValues(keys, values, middle, hi); // swap the middle with the high
 
 		var pivot = keys[middle];
 		Swap(keys, values, middle, hi - 1);
-		int left = 0, right = hi - 1;  // We already partitioned lo and hi and put the pivot in hi - 1.  And we pre-increment & decrement below.
+		int left = 0,
+			right = hi
+				- 1; // We already partitioned lo and hi and put the pivot in hi - 1.  And we pre-increment & decrement below.
 
 		while (left < right)
 		{
 			if (pivot == null)
 			{
-				while (left < (hi - 1) && keys[++left] == null)
+				while (left < hi - 1 && keys[++left] == null)
 					;
 				while (right > 0 && keys[--right] != null)
 					;
@@ -895,9 +853,7 @@ internal sealed class GenericArraySortHelper<TKey, TValue> : IArraySortHelper<TK
 
 		// Put pivot in the right location.
 		if (left != hi - 1)
-		{
 			Swap(keys, values, left, hi - 1);
-		}
 		return left;
 	}
 
@@ -907,9 +863,7 @@ internal sealed class GenericArraySortHelper<TKey, TValue> : IArraySortHelper<TK
 
 		var n = keys.Length;
 		for (var i = n >> 1; i >= 1; i--)
-		{
 			DownHeap(keys, values, i, n);
-		}
 
 		for (var i = n; i > 1; i--)
 		{
@@ -927,9 +881,7 @@ internal sealed class GenericArraySortHelper<TKey, TValue> : IArraySortHelper<TK
 		{
 			var child = 2 * i;
 			if (child < n && (keys[child - 1] == null || LessThan(ref keys[child - 1], ref keys[child])))
-			{
 				child++;
-			}
 
 			if (keys[child - 1] == null || !LessThan(ref d, ref keys[child - 1]))
 				break;
@@ -973,58 +925,34 @@ internal sealed class GenericArraySortHelper<TKey, TValue> : IArraySortHelper<TK
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)] // compiles to a single comparison or method call
 	private static bool LessThan(ref TKey left, ref TKey right)
-		=> typeof(TKey) == typeof(byte)
-		? (byte)(object)left < (byte)(object)right
-		: typeof(TKey) == typeof(sbyte)
-		? (sbyte)(object)left < (sbyte)(object)right
-		: typeof(TKey) == typeof(ushort)
-		? (ushort)(object)left < (ushort)(object)right
-		: typeof(TKey) == typeof(short)
-		? (short)(object)left < (short)(object)right
-		: typeof(TKey) == typeof(uint)
-		? (uint)(object)left < (uint)(object)right
-		: typeof(TKey) == typeof(int)
-		? (int)(object)left < (int)(object)right
-		: typeof(TKey) == typeof(ulong)
-		? (ulong)(object)left < (ulong)(object)right
-		: typeof(TKey) == typeof(long)
-		? (long)(object)left < (long)(object)right
-		: typeof(TKey) == typeof(nuint)
-		? (nuint)(object)left < (nuint)(object)right
-		: typeof(TKey) == typeof(nint)
-		? (nint)(object)left < (nint)(object)right
-		: typeof(TKey) == typeof(float)
-		? (float)(object)left < (float)(object)right
-		: typeof(TKey) == typeof(double)
-		? (double)(object)left < (double)(object)right
+		=> typeof(TKey) == typeof(byte) ? (byte)(object)left < (byte)(object)right
+		: typeof(TKey) == typeof(sbyte) ? (sbyte)(object)left < (sbyte)(object)right
+		: typeof(TKey) == typeof(ushort) ? (ushort)(object)left < (ushort)(object)right
+		: typeof(TKey) == typeof(short) ? (short)(object)left < (short)(object)right
+		: typeof(TKey) == typeof(uint) ? (uint)(object)left < (uint)(object)right
+		: typeof(TKey) == typeof(int) ? (int)(object)left < (int)(object)right
+		: typeof(TKey) == typeof(ulong) ? (ulong)(object)left < (ulong)(object)right
+		: typeof(TKey) == typeof(long) ? (long)(object)left < (long)(object)right
+		: typeof(TKey) == typeof(nuint) ? (nuint)(object)left < (nuint)(object)right
+		: typeof(TKey) == typeof(nint) ? (nint)(object)left < (nint)(object)right
+		: typeof(TKey) == typeof(float) ? (float)(object)left < (float)(object)right
+		: typeof(TKey) == typeof(double) ? (double)(object)left < (double)(object)right
 		: left.CompareTo(right) < 0;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)] // compiles to a single comparison or method call
 	private static bool GreaterThan(ref TKey left, ref TKey right)
-		=> typeof(TKey) == typeof(byte)
-		? (byte)(object)left > (byte)(object)right
-		: typeof(TKey) == typeof(sbyte)
-		? (sbyte)(object)left > (sbyte)(object)right
-		: typeof(TKey) == typeof(ushort)
-		? (ushort)(object)left > (ushort)(object)right
-		: typeof(TKey) == typeof(short)
-		? (short)(object)left > (short)(object)right
-		: typeof(TKey) == typeof(uint)
-		? (uint)(object)left > (uint)(object)right
-		: typeof(TKey) == typeof(int)
-		? (int)(object)left > (int)(object)right
-		: typeof(TKey) == typeof(ulong)
-		? (ulong)(object)left > (ulong)(object)right
-		: typeof(TKey) == typeof(long)
-		? (long)(object)left > (long)(object)right
-		: typeof(TKey) == typeof(nuint)
-		? (nuint)(object)left > (nuint)(object)right
-		: typeof(TKey) == typeof(nint)
-		? (nint)(object)left > (nint)(object)right
-		: typeof(TKey) == typeof(float)
-		? (float)(object)left > (float)(object)right
-		: typeof(TKey) == typeof(double)
-		? (double)(object)left > (double)(object)right
+		=> typeof(TKey) == typeof(byte) ? (byte)(object)left > (byte)(object)right
+		: typeof(TKey) == typeof(sbyte) ? (sbyte)(object)left > (sbyte)(object)right
+		: typeof(TKey) == typeof(ushort) ? (ushort)(object)left > (ushort)(object)right
+		: typeof(TKey) == typeof(short) ? (short)(object)left > (short)(object)right
+		: typeof(TKey) == typeof(uint) ? (uint)(object)left > (uint)(object)right
+		: typeof(TKey) == typeof(int) ? (int)(object)left > (int)(object)right
+		: typeof(TKey) == typeof(ulong) ? (ulong)(object)left > (ulong)(object)right
+		: typeof(TKey) == typeof(long) ? (long)(object)left > (long)(object)right
+		: typeof(TKey) == typeof(nuint) ? (nuint)(object)left > (nuint)(object)right
+		: typeof(TKey) == typeof(nint) ? (nint)(object)left > (nint)(object)right
+		: typeof(TKey) == typeof(float) ? (float)(object)left > (float)(object)right
+		: typeof(TKey) == typeof(double) ? (double)(object)left > (double)(object)right
 		: left.CompareTo(right) > 0;
 }
 
@@ -1041,15 +969,13 @@ internal static class SortUtils
 
 		for (var i = 0; i < keys.Length; i++)
 		{
-			if ((typeof(TKey) == typeof(double) && double.IsNaN((double)(object)keys[i])) ||
-				(typeof(TKey) == typeof(float) && float.IsNaN((float)(object)keys[i])))
+			if ((typeof(TKey) == typeof(double) && double.IsNaN((double)(object)keys[i]))
+				|| (typeof(TKey) == typeof(float) && float.IsNaN((float)(object)keys[i])))
 			{
 				(keys[i], keys[left]) = (keys[left], keys[i]);
 
 				if ((uint)i < (uint)values.Length) // check to see if we have values
-				{
 					(values[i], values[left]) = (values[left], values[i]);
-				}
 
 				left++;
 			}
@@ -1067,9 +993,12 @@ internal static class SortUtils
 	internal static void ThrowArgumentException_BadComparer(object? comparer)
 		=> throw new ArgumentException(string.Format(Arg_BogusIComparer, comparer));
 
-	internal static string InvalidOperation_IComparerFailed => "Failed to compare two elements in the array.";
+	internal static string InvalidOperation_IComparerFailed = "Failed to compare two elements in the array.";
+
 	internal static string Arg_BogusIComparer
-		=> "Unable to sort because the IComparer.Compare() method returns inconsistent results. Either a value does not compare equal to itself, or one value repeatedly compared to another value yields different results. IComparer: '{0}'.";
+		= "Unable to sort because the IComparer.Compare() method returns inconsistent results. Either a value does not "
+		+ "compare equal to itself, or one value repeatedly compared to another value yields different results. "
+		+ "IComparer: '{0}'.";
 }
 
 internal interface IArraySortHelper<TKey, TValue>
@@ -1085,12 +1014,40 @@ internal interface IArraySortHelper<TKey>
 internal static class BitOperations
 {
 	private static ReadOnlySpan<byte> Log2DeBruijn
-		=> new byte[32]
+		=> new byte[]
 		{
-			00, 09, 01, 10, 13, 21, 02, 29,
-			11, 14, 16, 18, 22, 25, 03, 30,
-			08, 12, 20, 28, 15, 17, 24, 07,
-			19, 27, 23, 06, 26, 05, 04, 31
+			00,
+			09,
+			01,
+			10,
+			13,
+			21,
+			02,
+			29,
+			11,
+			14,
+			16,
+			18,
+			22,
+			25,
+			03,
+			30,
+			08,
+			12,
+			20,
+			28,
+			15,
+			17,
+			24,
+			07,
+			19,
+			27,
+			23,
+			06,
+			26,
+			05,
+			04,
+			31
 		};
 
 	/// <summary>
@@ -1161,3 +1118,4 @@ internal static class BitOperations
 			(IntPtr)(int)((value * 0x07C4ACDDu) >> 27));
 	}
 }
+#pragma warning restore CS8500

@@ -1,5 +1,5 @@
 ﻿// Based on
-// https://github.com/CommunityToolkit/dotnet/blob/main/CommunityToolkit.HighPerformance/Extensions/SpanExtensions.cs
+// https://github.com/CommunityToolkit/dotnet/blob/main/src/CommunityToolkit.HighPerformance/Extensions/SpanExtensions.cs
 // with additional methods and support for more types
 
 // Licensed to the .NET Foundation under one or more agreements.
@@ -8,8 +8,11 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using JetBrains.Annotations;
 
 namespace FisheryLib;
+
+[PublicAPI]
 public static class SpanExtensions
 {
 	/// <summary>
@@ -45,87 +48,89 @@ public static class SpanExtensions
 		=> ArraySortHelper<TKey, TValue>.Default.Sort(keys, values, comparer);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static ref T First<T>(this Span<T> span)
-		=> ref span[0];
+	public static ref T First<T>(this Span<T> span) => ref span[0];
 
 	[return: MaybeNull]
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static T FirstOrDefault<T>(this Span<T> span)
-		=> !span.IsEmpty ? span[0]
-		: default;
+		=> !span.IsEmpty
+			? span[0]
+			: default;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static unsafe ref TSource First<TSource>(this Span<TSource> span, delegate*<ref TSource, bool> predicate)
 	{
 		ref var r0 = ref span.DangerousGetPinnableReference();
-		var length = (nint)(uint)span.Length;
-		nint offset = 0;
+		var length = (nuint)span.Length;
+		nuint offset = 0;
 
 		while (length >= 4)
 		{
-			if (predicate(ref Unsafe.Add(ref r0, offset)))
+			if (predicate(ref Unsafe.AddByteOffset(ref r0, offset)))
 				goto returnForOffset0;
-			if (predicate(ref Unsafe.Add(ref r0, offset + 1)))
-				return ref Unsafe.Add(ref r0, offset + 1);
-			if (predicate(ref Unsafe.Add(ref r0, offset + 2)))
-				return ref Unsafe.Add(ref r0, offset + 2);
-			if (predicate(ref Unsafe.Add(ref r0, offset + 3)))
-				return ref Unsafe.Add(ref r0, offset + 3);
+
+			if (predicate(ref Unsafe.AddByteOffset(ref r0, offset + (nuint)sizeof(TSource))))
+				return ref Unsafe.AddByteOffset(ref r0, offset + (nuint)sizeof(TSource));
+			if (predicate(ref Unsafe.AddByteOffset(ref r0, offset + (2 * (nuint)sizeof(TSource)))))
+				return ref Unsafe.AddByteOffset(ref r0, offset + (2 * (nuint)sizeof(TSource)));
+			if (predicate(ref Unsafe.AddByteOffset(ref r0, offset + (3 * (nuint)sizeof(TSource)))))
+				return ref Unsafe.AddByteOffset(ref r0, offset + (3 * (nuint)sizeof(TSource)));
 
 			length -= 4;
-			offset += 4;
+			offset += 4 * (nuint)sizeof(TSource);
 		}
 
 		while (length > 0)
 		{
-			if (predicate(ref Unsafe.Add(ref r0, offset)))
+			if (predicate(ref Unsafe.AddByteOffset(ref r0, offset)))
 				goto returnForOffset0;
 
 			length--;
-			offset++;
+			offset += (nuint)sizeof(TSource);
 		}
 
 		return ref ThrowNotFoundException<TSource>();
 
 	returnForOffset0:
-		return ref Unsafe.Add(ref r0, offset);
+		return ref Unsafe.AddByteOffset(ref r0, offset);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static ref TSource First<TSource>(this Span<TSource> span, Predicate<TSource> predicate)
+	public static unsafe ref TSource First<TSource>(this Span<TSource> span, Predicate<TSource> predicate)
 	{
 		ref var r0 = ref span.DangerousGetPinnableReference();
-		var length = (nint)(uint)span.Length;
-		nint offset = 0;
+		var length = (nuint)span.Length;
+		nuint offset = 0;
 
 		while (length >= 4)
 		{
-			if (predicate(Unsafe.Add(ref r0, offset)))
+			if (predicate(Unsafe.AddByteOffset(ref r0, offset)))
 				goto returnForOffset0;
-			if (predicate(Unsafe.Add(ref r0, offset + 1)))
-				return ref Unsafe.Add(ref r0, offset + 1);
-			if (predicate(Unsafe.Add(ref r0, offset + 2)))
-				return ref Unsafe.Add(ref r0, offset + 2);
-			if (predicate(Unsafe.Add(ref r0, offset + 3)))
-				return ref Unsafe.Add(ref r0, offset + 3);
+
+			if (predicate(Unsafe.AddByteOffset(ref r0, offset + (nuint)sizeof(TSource))))
+				return ref Unsafe.AddByteOffset(ref r0, offset + (nuint)sizeof(TSource));
+			if (predicate(Unsafe.AddByteOffset(ref r0, offset + (2 * (nuint)sizeof(TSource)))))
+				return ref Unsafe.AddByteOffset(ref r0, offset + (2 * (nuint)sizeof(TSource)));
+			if (predicate(Unsafe.AddByteOffset(ref r0, offset + (3 * (nuint)sizeof(TSource)))))
+				return ref Unsafe.AddByteOffset(ref r0, offset + (3 * (nuint)sizeof(TSource)));
 
 			length -= 4;
-			offset += 4;
+			offset += 4 * (nuint)sizeof(TSource);
 		}
 
 		while (length > 0)
 		{
-			if (predicate(Unsafe.Add(ref r0, offset)))
+			if (predicate(Unsafe.AddByteOffset(ref r0, offset)))
 				goto returnForOffset0;
 
 			length--;
-			offset++;
+			offset += (nuint)sizeof(TSource);
 		}
 
 		return ref ThrowNotFoundException<TSource>();
 
 	returnForOffset0:
-		return ref Unsafe.Add(ref r0, offset);
+		return ref Unsafe.AddByteOffset(ref r0, offset);
 	}
 
 	[DoesNotReturn]
@@ -133,145 +138,143 @@ public static class SpanExtensions
 
 	[return: MaybeNull]
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static unsafe TSource FirstOrDefault<TSource>(this Span<TSource> span, delegate*<ref TSource, bool> predicate)
+	public static unsafe TSource FirstOrDefault<TSource>(this Span<TSource> span,
+		delegate*<ref TSource, bool> predicate)
 	{
 		ref var r0 = ref span.DangerousGetPinnableReference();
-		var length = (nint)(uint)span.Length;
-		nint offset = 0;
+		var length = (nuint)span.Length;
+		nuint offset = 0;
 
 		while (length >= 4)
 		{
-			if (predicate(ref Unsafe.Add(ref r0, offset)))
+			if (predicate(ref Unsafe.AddByteOffset(ref r0, offset)))
 				goto returnForOffset0;
-			if (predicate(ref Unsafe.Add(ref r0, offset + 1)))
-				return Unsafe.Add(ref r0, offset + 1);
-			if (predicate(ref Unsafe.Add(ref r0, offset + 2)))
-				return Unsafe.Add(ref r0, offset + 2);
-			if (predicate(ref Unsafe.Add(ref r0, offset + 3)))
-				return Unsafe.Add(ref r0, offset + 3);
+
+			if (predicate(ref Unsafe.AddByteOffset(ref r0, offset + (nuint)sizeof(TSource))))
+				return Unsafe.AddByteOffset(ref r0, offset + (nuint)sizeof(TSource));
+			if (predicate(ref Unsafe.AddByteOffset(ref r0, offset + (2 * (nuint)sizeof(TSource)))))
+				return Unsafe.AddByteOffset(ref r0, offset + (2 * (nuint)sizeof(TSource)));
+			if (predicate(ref Unsafe.AddByteOffset(ref r0, offset + (3 * (nuint)sizeof(TSource)))))
+				return Unsafe.AddByteOffset(ref r0, offset + (3 * (nuint)sizeof(TSource)));
 
 			length -= 4;
-			offset += 4;
+			offset += 4 * (nuint)sizeof(TSource);
 		}
 
 		while (length > 0)
 		{
-			if (predicate(ref Unsafe.Add(ref r0, offset)))
+			if (predicate(ref Unsafe.AddByteOffset(ref r0, offset)))
 				goto returnForOffset0;
 
 			length--;
-			offset++;
+			offset += (nuint)sizeof(TSource);
 		}
 
 		return default;
 
 	returnForOffset0:
-		return Unsafe.Add(ref r0, offset);
+		return Unsafe.AddByteOffset(ref r0, offset);
 	}
 
 	[return: MaybeNull]
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static TSource FirstOrDefault<TSource>(this Span<TSource> span, Predicate<TSource> predicate)
+	public static unsafe TSource FirstOrDefault<TSource>(this Span<TSource> span, Predicate<TSource> predicate)
 	{
 		ref var r0 = ref span.DangerousGetPinnableReference();
-		var length = (nint)(uint)span.Length;
-		nint offset = 0;
+		var length = (nuint)span.Length;
+		nuint offset = 0;
 
 		while (length >= 4)
 		{
-			if (predicate(Unsafe.Add(ref r0, offset)))
+			if (predicate(Unsafe.AddByteOffset(ref r0, offset)))
 				goto returnForOffset0;
-			if (predicate(Unsafe.Add(ref r0, offset + 1)))
-				return Unsafe.Add(ref r0, offset + 1);
-			if (predicate(Unsafe.Add(ref r0, offset + 2)))
-				return Unsafe.Add(ref r0, offset + 2);
-			if (predicate(Unsafe.Add(ref r0, offset + 3)))
-				return Unsafe.Add(ref r0, offset + 3);
+
+			if (predicate(Unsafe.AddByteOffset(ref r0, offset + (nuint)sizeof(TSource))))
+				return Unsafe.AddByteOffset(ref r0, offset + (nuint)sizeof(TSource));
+			if (predicate(Unsafe.AddByteOffset(ref r0, offset + (2 * (nuint)sizeof(TSource)))))
+				return Unsafe.AddByteOffset(ref r0, offset + (2 * (nuint)sizeof(TSource)));
+			if (predicate(Unsafe.AddByteOffset(ref r0, offset + (3 * (nuint)sizeof(TSource)))))
+				return Unsafe.AddByteOffset(ref r0, offset + (3 * (nuint)sizeof(TSource)));
 
 			length -= 4;
-			offset += 4;
+			offset += 4 * (nuint)sizeof(TSource);
 		}
 
 		while (length > 0)
 		{
-			if (predicate(Unsafe.Add(ref r0, offset)))
+			if (predicate(Unsafe.AddByteOffset(ref r0, offset)))
 				goto returnForOffset0;
 
 			length--;
-			offset++;
+			offset += (nuint)sizeof(TSource);
 		}
 
 		return default;
 
 	returnForOffset0:
-		return Unsafe.Add(ref r0, offset);
+		return Unsafe.AddByteOffset(ref r0, offset);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool Any<TSource>(this Span<TSource> span)
-		=> !span.IsEmpty;
+	public static bool Any<TSource>(this Span<TSource> span) => !span.IsEmpty;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static unsafe bool Any<TSource>(this Span<TSource> span, delegate*<ref TSource, bool> predicate)
 	{
 		ref var r0 = ref span.DangerousGetPinnableReference();
-		var length = (nint)(uint)span.Length;
-		nint offset = 0;
+		var length = (nuint)span.Length;
+		nuint offset = 0;
 
 		while (length >= 4)
 		{
-			if (predicate(ref Unsafe.Add(ref r0, offset))
-				|| predicate(ref Unsafe.Add(ref r0, offset + 1))
-				|| predicate(ref Unsafe.Add(ref r0, offset + 2))
-				|| predicate(ref Unsafe.Add(ref r0, offset + 3)))
-			{
+			if (predicate(ref Unsafe.AddByteOffset(ref r0, offset))
+				|| predicate(ref Unsafe.AddByteOffset(ref r0, offset + (nuint)sizeof(TSource)))
+				|| predicate(ref Unsafe.AddByteOffset(ref r0, offset + (2 * (nuint)sizeof(TSource))))
+				|| predicate(ref Unsafe.AddByteOffset(ref r0, offset + (3 * (nuint)sizeof(TSource)))))
 				return true;
-			}
 
 			length -= 4;
-			offset += 4;
+			offset += 4 * (nuint)sizeof(TSource);
 		}
 
 		while (length > 0)
 		{
-			if (predicate(ref Unsafe.Add(ref r0, offset)))
+			if (predicate(ref Unsafe.AddByteOffset(ref r0, offset)))
 				return true;
 
 			length--;
-			offset++;
+			offset += (nuint)sizeof(TSource);
 		}
 
 		return false;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool Any<TSource>(this Span<TSource> span, Predicate<TSource> predicate)
+	public static unsafe bool Any<TSource>(this Span<TSource> span, Predicate<TSource> predicate)
 	{
 		ref var r0 = ref span.DangerousGetPinnableReference();
-		var length = (nint)(uint)span.Length;
-		nint offset = 0;
+		var length = (nuint)span.Length;
+		nuint offset = 0;
 
 		while (length >= 4)
 		{
-			if (predicate(Unsafe.Add(ref r0, offset))
-				|| predicate(Unsafe.Add(ref r0, offset + 1))
-				|| predicate(Unsafe.Add(ref r0, offset + 2))
-				|| predicate(Unsafe.Add(ref r0, offset + 3)))
-			{
+			if (predicate(Unsafe.AddByteOffset(ref r0, offset))
+				|| predicate(Unsafe.AddByteOffset(ref r0, offset + (nuint)sizeof(TSource)))
+				|| predicate(Unsafe.AddByteOffset(ref r0, offset + (2 * (nuint)sizeof(TSource))))
+				|| predicate(Unsafe.AddByteOffset(ref r0, offset + (3 * (nuint)sizeof(TSource)))))
 				return true;
-			}
 
 			length -= 4;
-			offset += 4;
+			offset += 4 * (nuint)sizeof(TSource);
 		}
 
 		while (length > 0)
 		{
-			if (predicate(Unsafe.Add(ref r0, offset)))
+			if (predicate(Unsafe.AddByteOffset(ref r0, offset)))
 				return true;
 
 			length--;
-			offset++;
+			offset += (nuint)sizeof(TSource);
 		}
 
 		return false;
@@ -285,99 +288,97 @@ public static class SpanExtensions
 	/// <param name="value">The <typeparamref name="T"/> value to look for.</param>
 	/// <returns>The number of occurrences of <paramref name="value"/> in <paramref name="span"/>.</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static int Count<T>(this Span<T> span, T value)
+	public static unsafe int Count<T>(this Span<T> span, T value)
 	{
 		ref var r0 = ref span.DangerousGetPinnableReference();
-		var length = (nint)(uint)span.Length;
-		nint result = 0;
-		nint offset = 0;
+		var length = (nuint)span.Length;
+		nuint result = 0;
+		nuint offset = 0;
 
 		// Main loop with 4 unrolled iterations
 		while (length >= 4)
 		{
-			result += Unsafe.Add(ref r0, offset).Equals<T>(value).ToByte();
-			result += Unsafe.Add(ref r0, offset + 1).Equals<T>(value).ToByte();
-			result += Unsafe.Add(ref r0, offset + 2).Equals<T>(value).ToByte();
-			result += Unsafe.Add(ref r0, offset + 3).Equals<T>(value).ToByte();
+			result += Unsafe.AddByteOffset(ref r0, offset).Equals<T>(value).ToByte();
+			result += Unsafe.AddByteOffset(ref r0, offset + (nuint)sizeof(T)).Equals<T>(value).ToByte();
+			result += Unsafe.AddByteOffset(ref r0, offset + (2 * (nuint)sizeof(T))).Equals<T>(value).ToByte();
+			result += Unsafe.AddByteOffset(ref r0, offset + (3 * (nuint)sizeof(T))).Equals<T>(value).ToByte();
 
 			length -= 4;
-			offset += 4;
+			offset += 4 * (nuint)sizeof(T);
 		}
 
 		// Iterate over the remaining values and count those that match
 		while (length > 0)
 		{
-			result += Unsafe.Add(ref r0, offset).Equals<T>(value).ToByte();
+			result += Unsafe.AddByteOffset(ref r0, offset).Equals<T>(value).ToByte();
 
 			length--;
-			offset++;
+			offset += (nuint)sizeof(T);
 		}
 
 		return (int)result;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool Contains<T>(this Span<T> span, T value)
+	public static unsafe bool Contains<T>(this Span<T> span, T value)
 	{
 		ref var r0 = ref span.DangerousGetPinnableReference();
-		var length = (nint)(uint)span.Length;
-		nint offset = 0;
+		var length = (nuint)span.Length;
+		nuint offset = 0;
 
 		while (length >= 4)
 		{
-			if (Unsafe.Add(ref r0, offset).Equals<T>(value)
-				|| Unsafe.Add(ref r0, offset + 1).Equals<T>(value)
-				|| Unsafe.Add(ref r0, offset + 2).Equals<T>(value)
-				|| Unsafe.Add(ref r0, offset + 3).Equals<T>(value))
-			{
+			if (Unsafe.AddByteOffset(ref r0, offset).Equals<T>(value)
+				|| Unsafe.AddByteOffset(ref r0, offset + (nuint)sizeof(T)).Equals<T>(value)
+				|| Unsafe.AddByteOffset(ref r0, offset + (2 * (nuint)sizeof(T))).Equals<T>(value)
+				|| Unsafe.AddByteOffset(ref r0, offset + (3 * (nuint)sizeof(T))).Equals<T>(value))
 				return true;
-			}
 
 			length -= 4;
-			offset += 4;
+			offset += 4 * (nuint)sizeof(T);
 		}
 
 		while (length > 0)
 		{
-			if (Unsafe.Add(ref r0, offset).Equals<T>(value))
+			if (Unsafe.AddByteOffset(ref r0, offset).Equals<T>(value))
 				return true;
 
 			length--;
-			offset++;
+			offset += (nuint)sizeof(T);
 		}
 
 		return false;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static int IndexOf<T>(this Span<T> span, T value)
+	public static unsafe int IndexOf<T>(this Span<T> span, T value)
 	{
 		ref var r0 = ref span.DangerousGetPinnableReference();
-		var length = (nint)(uint)span.Length;
-		nint offset = 0;
+		var length = (nuint)span.Length;
+		nuint offset = 0;
 
 		while (length >= 4)
 		{
-			if (Unsafe.Add(ref r0, offset).Equals<T>(value))
+			if (Unsafe.AddByteOffset(ref r0, offset).Equals<T>(value))
 				return (int)offset;
-			if (Unsafe.Add(ref r0, offset + 1).Equals<T>(value))
+			if (Unsafe.AddByteOffset(ref r0, offset + (nuint)sizeof(T)).Equals<T>(value))
 				return (int)offset + 1;
-			if (Unsafe.Add(ref r0, offset + 2).Equals<T>(value))
+			if (Unsafe.AddByteOffset(ref r0, offset + (2 * (nuint)sizeof(T))).Equals<T>(value))
 				return (int)offset + 2;
-			if (Unsafe.Add(ref r0, offset + 3).Equals<T>(value))
+			if (Unsafe.AddByteOffset(ref r0, offset + (3 * (nuint)sizeof(T))).Equals<T>(value))
 				return (int)offset + 3;
 
 			length -= 4;
-			offset += 4;
+			offset += 4 * (nuint)sizeof(T);
 		}
 
 		while (length > 0)
 		{
-			if (Unsafe.Add(ref r0, offset).Equals<T>(value))
+			if (Unsafe.AddByteOffset(ref r0, offset).Equals<T>(value))
 				return (int)offset;
 
 			length--;
-			offset++;
+			offset += (nuint)sizeof(T);
 		}
 
 		return -1;
@@ -416,14 +417,15 @@ public static class SpanReferenceExtensions
 	/// <param name="reference">The reference to the target item to get the index for.</param>
 	/// <returns>The index of <paramref name="reference"/> within <paramref name="span"/>, or <c>-1</c>.</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static int IndexOf<T>(this Span<T> span, ref T reference)
+	public static unsafe int IndexOf<T>(this Span<T> span, ref T reference)
 	{
 		ref var r0 = ref span.DangerousGetPinnableReference();
 		var byteOffset = Unsafe.ByteOffset(ref r0, ref reference);
 
-		var elementOffset = byteOffset / (nint)(uint)Unsafe.SizeOf<T>();
+		var elementOffset = byteOffset / (nint)(uint)sizeof(T);
 
-		return (nuint)elementOffset >= (uint)span.Length ? -1
+		return (nuint)elementOffset >= (uint)span.Length
+			? -1
 			: (int)elementOffset;
 	}
 
@@ -435,8 +437,7 @@ public static class SpanReferenceExtensions
 	/// <param name="reference">The reference to the target item to locate.</param>
 	/// <returns>true if the reference points towards an element of <see cref="Span{T}"/>; otherwise, false.</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool Contains<T>(this Span<T> span, ref T reference)
-		=> span.IndexOf(ref reference) >= 0;
+	public static bool Contains<T>(this Span<T> span, ref T reference) => span.IndexOf(ref reference) >= 0;
 }
 
 public static class SpanStructExtensions
@@ -449,102 +450,100 @@ public static class SpanStructExtensions
 	/// <param name="value">The <typeparamref name="T"/> value to look for.</param>
 	/// <returns>The number of occurrences of <paramref name="value"/> in <paramref name="span"/>.</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static int Count<T>(this Span<T> span, in T value)
+	public static unsafe int Count<T>(this Span<T> span, in T value)
 		where T : struct
 	{
 		ref var r0 = ref span.DangerousGetPinnableReference();
-		var length = (nint)(uint)span.Length;
-		nint result = 0;
-		nint offset = 0;
+		var length = (nuint)span.Length;
+		nuint result = 0;
+		nuint offset = 0;
 
 		// Main loop with 4 unrolled iterations
 		while (length >= 4)
 		{
-			result += Unsafe.Add(ref r0, offset).Equals(ref Unsafe.AsRef(in value)).ToByte();
-			result += Unsafe.Add(ref r0, offset + 1).Equals(ref Unsafe.AsRef(in value)).ToByte();
-			result += Unsafe.Add(ref r0, offset + 2).Equals(ref Unsafe.AsRef(in value)).ToByte();
-			result += Unsafe.Add(ref r0, offset + 3).Equals(ref Unsafe.AsRef(in value)).ToByte();
+			result += Unsafe.AddByteOffset(ref r0, offset).Equals(ref Unsafe.AsRef(in value)).ToByte();
+			result += Unsafe.AddByteOffset(ref r0, offset + (nuint)sizeof(T)).Equals(ref Unsafe.AsRef(in value)).ToByte();
+			result += Unsafe.AddByteOffset(ref r0, offset + (2 * (nuint)sizeof(T))).Equals(ref Unsafe.AsRef(in value)).ToByte();
+			result += Unsafe.AddByteOffset(ref r0, offset + (3 * (nuint)sizeof(T))).Equals(ref Unsafe.AsRef(in value)).ToByte();
 
 			length -= 4;
-			offset += 4;
+			offset += 4 * (nuint)sizeof(T);
 		}
 
 		// Iterate over the remaining values and count those that match
 		while (length > 0)
 		{
-			result += Unsafe.Add(ref r0, offset).Equals(ref Unsafe.AsRef(in value)).ToByte();
+			result += Unsafe.AddByteOffset(ref r0, offset).Equals(ref Unsafe.AsRef(in value)).ToByte();
 
 			length--;
-			offset++;
+			offset += (nuint)sizeof(T);
 		}
 
 		return (int)result;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool Contains<T>(this Span<T> span, in T value)
+	public static unsafe bool Contains<T>(this Span<T> span, in T value)
 		where T : struct
 	{
 		ref var r0 = ref span.DangerousGetPinnableReference();
-		var length = (nint)(uint)span.Length;
-		nint offset = 0;
+		var length = (nuint)span.Length;
+		nuint offset = 0;
 
 		while (length >= 4)
 		{
-			if (Unsafe.Add(ref r0, offset).Equals(ref Unsafe.AsRef(in value))
-				|| Unsafe.Add(ref r0, offset + 1).Equals(ref Unsafe.AsRef(in value))
-				|| Unsafe.Add(ref r0, offset + 2).Equals(ref Unsafe.AsRef(in value))
-				|| Unsafe.Add(ref r0, offset + 3).Equals(ref Unsafe.AsRef(in value)))
-			{
+			if (Unsafe.AddByteOffset(ref r0, offset).Equals(ref Unsafe.AsRef(in value))
+				|| Unsafe.AddByteOffset(ref r0, offset + (nuint)sizeof(T)).Equals(ref Unsafe.AsRef(in value))
+				|| Unsafe.AddByteOffset(ref r0, offset + (2 * (nuint)sizeof(T))).Equals(ref Unsafe.AsRef(in value))
+				|| Unsafe.AddByteOffset(ref r0, offset + (3 * (nuint)sizeof(T))).Equals(ref Unsafe.AsRef(in value)))
 				return true;
-			}
 
 			length -= 4;
-			offset += 4;
+			offset += 4 * (nuint)sizeof(T);
 		}
 
 		while (length > 0)
 		{
-			if (Unsafe.Add(ref r0, offset).Equals(ref Unsafe.AsRef(in value)))
+			if (Unsafe.AddByteOffset(ref r0, offset).Equals(ref Unsafe.AsRef(in value)))
 				return true;
 
 			length--;
-			offset++;
+			offset += (nuint)sizeof(T);
 		}
 
 		return false;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static int IndexOf<T>(this Span<T> span, in T value)
+	public static unsafe int IndexOf<T>(this Span<T> span, in T value)
 		where T : struct
 	{
 		ref var r0 = ref span.DangerousGetPinnableReference();
-		var length = (nint)(uint)span.Length;
-		nint offset = 0;
+		var length = (nuint)span.Length;
+		nuint offset = 0;
 
 		while (length >= 4)
 		{
-			if (Unsafe.Add(ref r0, offset).Equals(ref Unsafe.AsRef(in value)))
+			if (Unsafe.AddByteOffset(ref r0, offset).Equals(ref Unsafe.AsRef(in value)))
 				return (int)offset;
-			if (Unsafe.Add(ref r0, offset + 1).Equals(ref Unsafe.AsRef(in value)))
+			if (Unsafe.AddByteOffset(ref r0, offset + (nuint)sizeof(T)).Equals(ref Unsafe.AsRef(in value)))
 				return (int)offset + 1;
-			if (Unsafe.Add(ref r0, offset + 2).Equals(ref Unsafe.AsRef(in value)))
+			if (Unsafe.AddByteOffset(ref r0, offset + (2 * (nuint)sizeof(T))).Equals(ref Unsafe.AsRef(in value)))
 				return (int)offset + 2;
-			if (Unsafe.Add(ref r0, offset + 3).Equals(ref Unsafe.AsRef(in value)))
+			if (Unsafe.AddByteOffset(ref r0, offset + (3 * (nuint)sizeof(T))).Equals(ref Unsafe.AsRef(in value)))
 				return (int)offset + 3;
 
 			length -= 4;
-			offset += 4;
+			offset += 4 * (nuint)sizeof(T);
 		}
 
 		while (length > 0)
 		{
-			if (Unsafe.Add(ref r0, offset).Equals(ref Unsafe.AsRef(in value)))
+			if (Unsafe.AddByteOffset(ref r0, offset).Equals(ref Unsafe.AsRef(in value)))
 				return (int)offset;
 
 			length--;
-			offset++;
+			offset += (nuint)sizeof(T);
 		}
 
 		return -1;

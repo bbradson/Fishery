@@ -6,6 +6,7 @@
 
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using JetBrains.Annotations;
 
 namespace FisheryLib;
 
@@ -14,6 +15,7 @@ namespace FisheryLib;
 /// </summary>
 /// <typeparam name="T">The type of items to enumerate.</typeparam>
 [EditorBrowsable(EditorBrowsableState.Never)]
+[PublicAPI]
 public ref struct ReadOnlySpanEnumerable<T>
 {
 	/// <summary>
@@ -58,7 +60,7 @@ public ref struct ReadOnlySpanEnumerable<T>
 	{
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		get
-			// See comment in SpanEnumerable<T> about this
+		// See comment in SpanEnumerable<T> about this
 			=> new(ref Unsafe.Add(ref _span.DangerousGetPinnableReference(), (nint)(uint)_index), _index);
 	}
 
@@ -79,8 +81,7 @@ public ref struct ReadOnlySpanEnumerable<T>
 		/// <param name="value">A reference to the target value.</param>
 		/// <param name="index">The index of the target value.</param>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public Item(ref T value, int index)
-			=> _span = MemoryMarshal.CreateReadOnlySpan(ref value, index);
+		public Item(ref T value, int index) => _span = MemoryMarshal.CreateReadOnlySpan(ref value, index);
 
 		/// <summary>
 		/// Gets the reference to the current value.

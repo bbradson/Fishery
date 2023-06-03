@@ -7,12 +7,14 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using JetBrains.Annotations;
 
 namespace FisheryLib;
 
 internal static class UtilityF
 {
-	internal static void ThrowIfNullOrEmpty<T>(IEnumerable<T> sequence, [CallerArgumentExpression(nameof(sequence))] string argumentName = "")
+	internal static void ThrowIfNullOrEmpty<T>([NoEnumeration] IEnumerable<T> sequence,
+		[CallerArgumentExpression(nameof(sequence))] string argumentName = "")
 	{
 		Guard.IsNotNull(sequence, argumentName);
 
@@ -24,7 +26,8 @@ internal static class UtilityF
 	internal static void Throw(string message) => throw new(message);
 
 	[DoesNotReturn]
-	internal static void Throw<T>(string message) where T : Exception => throw (T)Activator.CreateInstance(typeof(T), message);
+	internal static void Throw<T>(string message) where T : Exception
+		=> throw (T)Activator.CreateInstance(typeof(T), message);
 
 	[MethodImpl(MethodImplOptions.NoInlining)]
 	internal static Assembly GetCallingAssembly()
@@ -43,25 +46,4 @@ internal static class UtilityF
 
 		return Assembly.GetCallingAssembly();
 	}
-
-	/*internal static T New<T>() => Create<T>.@new();
-
-	internal static T New<T, V>(V argument) => Create<T, V>.@new(argument);
-
-	internal static T New<T, V, W>(V firstArgument, W secondArgument) => Create<T, V, W>.@new(firstArgument, secondArgument);
-
-	private static class Create<T>
-	{
-		internal static Func<T> @new = AccessTools.Constructor(typeof(T)).CreateDelegate<Func<T>>();
-	}
-
-	private static class Create<T, V>
-	{
-		internal static Func<V, T> @new = AccessTools.Constructor(typeof(T), new[] { typeof(V) }).CreateDelegate<Func<V, T>>();
-	}
-
-	private static class Create<T, V, W>
-	{
-		internal static Func<V, W, T> @new = AccessTools.Constructor(typeof(T), new[] { typeof(V), typeof(W) }).CreateDelegate<Func<V, W, T>>();
-	}*/
 }
