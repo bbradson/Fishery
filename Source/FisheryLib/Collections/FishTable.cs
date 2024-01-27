@@ -13,6 +13,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security;
 using FisheryLib.FunctionPointers;
+using FisheryLib.Pools;
 using FisheryLib.Utility;
 using JetBrains.Annotations;
 
@@ -44,20 +45,16 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		_version;
 
 	private float _maxLoadFactor = 0.5f;
+	
+	public KeyCollection Keys => new(this);
 
-	public ICollection<TKey> Keys => throw new NotImplementedException();
-
-	public ICollection<TValue> Values => throw new NotImplementedException();
+	public ValueCollection Values => new(this);
 
 	public int Version
 	{
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		get => _version;
-		set
-		{
-			Guard.IsGreaterThan(value, _version);
-			_version = value;
-		}
+		set => _version = value;
 	}
 
 	public int Count
@@ -73,9 +70,13 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 			+ ((uint)sizeof(Entry) * (uint)_buckets.Length)
 			+ ((_tails.Length + 1u) >> 1);
 
+	public uint CollisionCount => (uint)GetTailingEntriesCount();
+
 	public event Action<KeyValuePair<TKey, TValue>>?
 		EntryAdded,
 		EntryRemoved;
+	
+	public Func<TKey, TValue> ValueInitializer { get; set; } = static _ => Reflection.New<TValue>();
 
 	public delegate void EntryEventHandler(TKey key, ref TValue value);
 
@@ -132,12 +133,12 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		public void Invoke(KeyValuePair<TKey, TValue> pair);
 	}
 
-	private record KeyEventHandler(Action<TKey> Action) : IEventHandler<TKey>
+	private sealed record KeyEventHandler(Action<TKey> Action) : IEventHandler<TKey>
 	{
 		public void Invoke(KeyValuePair<TKey, TValue> pair) => Action(pair.Key);
 	}
 
-	private record ValueEventHandler(Action<TValue> Action) : IEventHandler<TValue>
+	private sealed record ValueEventHandler(Action<TValue> Action) : IEventHandler<TValue>
 	{
 		public void Invoke(KeyValuePair<TKey, TValue> pair) => Action(pair.Value);
 	}
@@ -152,21 +153,25 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 			_maxLoadFactor = value;
 		}
 	}
-
-	ICollection IDictionary.Keys => throw new NotImplementedException();
 	
-	ICollection IDictionary.Values => throw new NotImplementedException();
+	ICollection<TKey> IDictionary<TKey, TValue>.Keys => Keys;
+	
+	ICollection<TValue> IDictionary<TKey, TValue>.Values => Values;
+
+	ICollection IDictionary.Keys => Keys;
+	
+	ICollection IDictionary.Values => Values;
 	
 	bool IDictionary.IsFixedSize => false;
 	
 	object ICollection.SyncRoot => this; // matching System.Collections.Generic.Dictionary
 	
 	bool ICollection.IsSynchronized => false;
-	
-	IEnumerable<TKey> IReadOnlyDictionary<TKey, TValue>.Keys => throw new NotImplementedException();
-	
-	IEnumerable<TValue> IReadOnlyDictionary<TKey, TValue>.Values => throw new NotImplementedException();
-	
+
+	IEnumerable<TKey> IReadOnlyDictionary<TKey, TValue>.Keys => Keys;
+
+	IEnumerable<TValue> IReadOnlyDictionary<TKey, TValue>.Values => Values;
+
 	object? IDictionary.this[object key]
 	{
 		get => this[AssertKeyType(key)];
@@ -213,7 +218,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		}
 
 		[CollectionAccess(CollectionAccessType.UpdatedContent)]
-		set => InsertEntry(key, value);
+		set => InsertEntry(key, value, ReplaceBehaviour.Replace);
 	}
 
 	public FishTable() : this(0)
@@ -242,56 +247,6 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private int GetIndexForTail(int entryIndex, uint tail) => (entryIndex + GetJumpDistance(tail)) & _wrapAroundMask;
-
-	#region Junk
-
-	// private static long GetJumpDistanceLong(byte index)
-	// 	=> index switch
-	// 	{
-	// 		0 => 0, 1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5, 6 => 6, 7 => 7,
-	// 		8 => 8, 9 => 9, 10 => 10, 11 => 11, 12 => 12, 13 => 13, 14 => 14,
-	// 		15 => 15, 16 => 21, 17 => 28, 18 => 36, 19 => 45, 20 => 55, 21 => 66,
-	// 		22 => 78, 23 => 91, 24 => 105, 25 => 120, 26 => 136, 27 => 153,
-	// 		28 => 171, 29 => 190, 30 => 210, 31 => 231, 32 => 253, 33 => 276,
-	// 		34 => 300, 35 => 325, 36 => 351, 37 => 378, 38 => 406, 39 => 435,
-	// 		40 => 465, 41 => 496, 42 => 528, 43 => 561, 44 => 595, 45 => 630,
-	// 		46 => 666, 47 => 703, 48 => 741, 49 => 780, 50 => 820, 51 => 861,
-	// 		52 => 903, 53 => 946, 54 => 990, 55 => 1035, 56 => 1081, 57 => 1128,
-	// 		58 => 1176, 59 => 1225, 60 => 1275, 61 => 1326, 62 => 1378, 63 => 1431,
-	// 		64 => 1485, 65 => 1540, 66 => 1596, 67 => 1653, 68 => 1711, 69 => 1770,
-	// 		70 => 1830, 71 => 1891, 72 => 1953, 73 => 2016, 74 => 2080, 75 => 2145,
-	// 		76 => 2211, 77 => 2278, 78 => 2346, 79 => 2415, 80 => 2485, 81 => 2556,
-	// 		82 => 3741, 83 => 8385, 84 => 18915, 85 => 42486, 86 => 95703, 87 => 215496,
-	// 		88 => 485605, 89 => 1091503, 90 => 2456436, 91 => 5529475, 92 => 12437578,
-	// 		93 => 27986421, 94 => 62972253, 95 => 141700195, 96 => 318819126, 97 => 717314626,
-	// 		98 => 1614000520, 99 => 3631437253, 100 => 8170829695, 101 => 18384318876, 102 => 41364501751,
-	// 		103 => 93070021080, 104 => 209407709220, 105 => 471167588430, 106 => 1060127437995, 107 => 2385287281530,
-	// 		108 => 5366895564381, 109 => 12075513791265, 110 => 27169907873235, 111 => 61132301007778,
-	// 		112 => 137547673121001, 113 => 309482258302503, 114 => 696335090510256, 115 => 1566753939653640,
-	// 		116 => 3525196427195653, 117 => 7931691866727775, 118 => 17846306747368716,
-	// 		119 => 40154190394120111, 120 => 90346928493040500, 121 => 203280588949935750,
-	// 		122 => 457381324898247375, 123 => 1029107980662394500, 124 => 2315492957028380766,
-	// 		125 => 5209859150892887590, > 125 => throw new()
-	// 	};
-	
-	// private static int GetJumpDistance(byte index)
-	// 	=> index switch
-	// 	{
-	// 		0 => 0, 1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5, 6 => 6, 7 => 7, 8 => 8, 9 => 9, 10 => 10, 11 => 11,
-	// 		12 => 12, 13 => 13, 14 => 14, 15 => 15, 16 => 21, 17 => 28, 18 => 36, 19 => 45, 20 => 55, 21 => 66,
-	// 		22 => 78, 23 => 91, 24 => 105, 25 => 120, 26 => 136, 27 => 153, 28 => 171, 29 => 190, 30 => 210, 31 => 231,
-	// 		32 => 253, 33 => 276, 34 => 300, 35 => 325, 36 => 351, 37 => 378, 38 => 406, 39 => 435, 40 => 465,
-	// 		41 => 496, 42 => 528, 43 => 561, 44 => 595, 45 => 630, 46 => 666, 47 => 703, 48 => 741, 49 => 780,
-	// 		50 => 820, 51 => 861, 52 => 903, 53 => 946, 54 => 990, 55 => 1035, 56 => 1081, 57 => 1128, 58 => 1176,
-	// 		59 => 1225, 60 => 1275, 61 => 1326, 62 => 1378, 63 => 1431, 64 => 1485, 65 => 1540, 66 => 1596, 67 => 1653,
-	// 		68 => 1711, 69 => 1770, 70 => 1830, 71 => 1891, 72 => 1953, 73 => 2016, 74 => 2080, 75 => 2145, 76 => 2211,
-	// 		77 => 2278, 78 => 2346, 79 => 2415, 80 => 2485, 81 => 2556, 82 => 3741, 83 => 8385, 84 => 18915,
-	// 		85 => 42486, 86 => 95703, 87 => 215496, 88 => 485605, 89 => 1091503, 90 => 2456436, 91 => 5529475,
-	// 		92 => 12437578, 93 => 27986421, 94 => 62972253, 95 => 141700195, 96 => 318819126, 97 => 717314626,
-	// 		98 => 1614000520, 255 => int.MaxValue, > 98 => ThrowForInvalidIndex(index)
-	// 	};
-
-	#endregion
 	
 	private static int GetJumpDistance(uint index)
 		=> index switch
@@ -303,10 +258,8 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 	[MethodImpl(MethodImplOptions.NoInlining)]
 	[DoesNotReturn]
 	private static int MultiplyWithPhi(uint index)
-		=> throw new NotImplementedException(); // (int)(uint)Math.Round(index * FishMath.PHI);
-
-	// private static int ThrowForInvalidIndex(byte index)
-	// 	=> throw new($"Jump distance index for FishTable too large. Should be < 99, got {index} instead.");
+		=> throw new NotImplementedException($"Tried computing jump distance from a tails value of {index}");
+	//	=> (int)(uint)Math.Round(index * FishMath.PHI);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private bool IsTail(int bucketIndex)
@@ -325,6 +278,12 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		_tails.SetSolo(bucketIndex);
 	}
 
+	private void SetBucketEmpty(int index)
+	{
+		_buckets[index] = default;
+		_tails.SetEmpty(index);
+	}
+
 	private void SetEntryAsTail(int bucketIndex, in Entry entry, int parentIndex, uint offset)
 	{
 		SetEntryWithoutTail(bucketIndex, entry);
@@ -334,22 +293,31 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 	private void SetParentTail(int entryIndex, uint newTail)
 		=> _tails[(uint)GetParentBucketIndex(entryIndex)] = newTail;
 
-	private void InsertEntry(TKey key, TValue? value, bool allowReplace = true, bool shifting = false)
-		=> InsertEntry(new(key, value), allowReplace, shifting);
+	/// <summary>
+	/// Returns true when adding a new entry, false for replacing an existing entry or failing to do so. Does not
+	/// adjust Count, Version or invoke EntryAdded.
+	/// </summary>
+	private bool InsertEntry(TKey key, TValue? value, ReplaceBehaviour replaceBehaviour, bool shifting = false)
+		=> InsertEntry(new(key, value), replaceBehaviour, shifting);
 
-	private void InsertEntry(in Entry entry, bool allowReplace = true, bool shifting = false)
+	/// <summary>
+	/// Returns true when adding a new entry, false for replacing an existing entry or failing to do so. Does not
+	/// adjust Count, Version or invoke EntryAdded.
+	/// </summary>
+	private bool InsertEntry(in Entry entry, ReplaceBehaviour replaceBehaviour, bool shifting = false)
 	{
-		var addedNewEntry = InsertEntryInternal(entry, allowReplace);
+		var addedNewEntry = InsertEntryInternal(entry, replaceBehaviour);
 
 		if (shifting)
-			return;
+			return addedNewEntry;
 
 		_version++;
 
 		if (!addedNewEntry)
-			return;
+			return false;
 
 		OnEntryAdded(entry.AsKeyValuePair());
+		return true;
 	}
 
 	private void OnEntryAdded(in KeyValuePair<TKey, TValue> entry)
@@ -360,10 +328,10 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 	}
 
 	/// <summary>
-	/// Returns true when adding a new entry, false for replacing an existing entry. AllowReplace: false causes throwing
-	/// instead. Does not adjust Count, Version or invoke EntryAdded.
+	/// Returns true when adding a new entry, false for replacing an existing entry or failing to do so. Does not
+	/// adjust Count, Version or invoke EntryAdded.
 	/// </summary>
-	private bool InsertEntryInternal(in Entry entry, bool allowReplace = true)
+	private bool InsertEntryInternal(in Entry entry, ReplaceBehaviour replaceBehaviour)
 	{
 	StartOfMethod:
 		var bucketIndex = GetBucketIndex(entry.Key);
@@ -375,7 +343,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 			return true;
 		}
 
-		if (TryReplaceValueOfMatchingKey(entry, allowReplace, ref bucket))
+		if (TryReplaceValueOfMatchingKey(entry, replaceBehaviour, ref bucket))
 			return false;
 
 		if (CheckResize())
@@ -384,51 +352,28 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		if (IsTail(ref bucket, bucketIndex))
 		{
 			var previousEntry = bucket;
-			var hasTail = !_tails.IsSolo(bucketIndex);
-			var tailingEntries = hasTail ? new Entry[GetTailCount(bucketIndex)] : null;
-
-			if (hasTail)
-			{
-				var i = 0;
-				var tailIndex = GetTailIndex(bucketIndex);
-
-				while (true)
-				{
-					ref var tailingBucket = ref _buckets[tailIndex];
-					tailingEntries![i++] = tailingBucket;
-					tailingBucket = default;
-
-					if (!_tails.IsSoloOrEmpty(tailIndex))
-					{
-						var nextTailIndex = GetTailIndex(tailIndex);
-						_tails.SetEmpty(tailIndex);
-						tailIndex = nextTailIndex;
-					}
-					else
-					{
-						_tails.SetEmpty(tailIndex);
-						break;
-					}
-				}
-			}
+			var tailingEntries = TryGetAndClearTailingEntries(bucketIndex);
 			
 			SetParentTail(bucketIndex, Tails.SOLO);
 			SetEntryWithoutTail(bucketIndex, entry);
-
-			InsertEntry(previousEntry, shifting: true);
-			if (hasTail)
-			{
-				for (var i = 0; i < tailingEntries!.Length; i++)
-					InsertEntry(tailingEntries[i], shifting: true);
-			}
+			InsertEntry(previousEntry, ReplaceBehaviour.Throw, true);
+			
+			if (tailingEntries != null)
+				InsertEntries(tailingEntries, ReplaceBehaviour.Throw, true);
 
 			return true;
 		}
 		else
 		{
-			return !TryFindTailIndexAndReplace(entry, ref bucketIndex, allowReplace)
+			return !TryFindTailIndexAndReplace(entry, ref bucketIndex, replaceBehaviour)
 				&& InsertAsTail(entry, bucketIndex);
 		}
+	}
+
+	private void InsertEntries(Entry[] tailingEntries, ReplaceBehaviour replaceBehaviour, bool shifting = false)
+	{
+		for (var i = 0; i < tailingEntries.Length; i++)
+			InsertEntry(tailingEntries[i], replaceBehaviour, shifting);
 	}
 
 	private int GetTailCount(int index)
@@ -444,6 +389,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		return tailCount;
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private bool IsBucketEmpty(int bucketIndex) => IsBucketEmpty(bucketIndex, _tails, _buckets);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -466,28 +412,35 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		return false;							// no good workaround without performance hit
 	}
 
-	private bool TryFindTailIndexAndReplace(in Entry entry, ref int bucketIndex, bool allowReplace)
+	private bool TryFindTailIndexAndReplace(in Entry entry, ref int bucketIndex, ReplaceBehaviour replaceBehaviour)
 	{
 		while (true)
 		{
 			if (!TryContinueWithTail(ref bucketIndex))
 				return false;
 			
-			if (TryReplaceValueOfMatchingKey(entry, allowReplace, ref _buckets[bucketIndex]))
+			if (TryReplaceValueOfMatchingKey(entry, replaceBehaviour, ref _buckets[bucketIndex]))
 				return true;
 		}
 	}
 
-	private unsafe bool TryReplaceValueOfMatchingKey(in Entry entry, bool allowReplace, ref Entry bucket)
+	private unsafe bool TryReplaceValueOfMatchingKey(in Entry entry, ReplaceBehaviour replaceBehaviour,
+		ref Entry bucket)
 	{
 		if (!_keyEqualityComparer(bucket.Key, entry.Key))
 			return false;
 
-		if (!allowReplace)
-			ThrowHelper.ThrowAddingDuplicateWithKeyArgumentException(entry.Key);
-
-		bucket.Value = entry.Value;
-		return true;
+		switch (replaceBehaviour)
+		{
+			case ReplaceBehaviour.Throw:
+				return ThrowHelper.ThrowAddingDuplicateWithKeyArgumentException(entry.Key);
+			case ReplaceBehaviour.Replace:
+				bucket.Value = entry.Value;
+				goto default;
+			case ReplaceBehaviour.Return:
+			default:
+				return true;
+		}
 	}
 
 	private bool InsertAsTail(in Entry entry, int bucketIndex)
@@ -504,7 +457,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 				SetEntryAsTail(bucketIndex, entry, parentIndex, offset);
 				return true;
 			}
-			
+
 			if (IsTail(bucketIndex) && offset < _tails[(uint)GetParentBucketIndex(bucketIndex)])
 				break;
 
@@ -515,55 +468,77 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 				WarnForPossiblyExcessiveResizing(entry);
 
 			Resize();
-			InsertEntry(entry, false, true);
+			InsertEntry(entry, ReplaceBehaviour.Throw, true);
 			return true;
 		}
 		
 		var previousEntry = _buckets[bucketIndex];
-		var hasTail = !_tails.IsSolo(bucketIndex);
-		
-		var tailingEntries = hasTail ? new Entry[GetTailCount(bucketIndex)] : null;
-
-		if (hasTail)
-		{
-			var k = 0;
-			var tailIndex = GetTailIndex(bucketIndex);
-
-			while (true)
-			{
-				ref var tailingBucket = ref _buckets[tailIndex];
-				tailingEntries![k] = tailingBucket;
-
-				k++;
-				tailingBucket = default;
-
-				if (!_tails.IsSoloOrEmpty(tailIndex))
-				{
-					var nextTailIndex = GetTailIndex(tailIndex);
-					_tails.SetEmpty(tailIndex);
-					tailIndex = nextTailIndex;
-				}
-				else
-				{
-					_tails.SetEmpty(tailIndex);
-					break;
-				}
-			}
-		}
+		var tailingEntries = TryGetAndClearTailingEntries(bucketIndex);
 
 		SetParentTail(bucketIndex, Tails.SOLO);
 		SetEntryAsTail(bucketIndex, entry, parentIndex, offset);
-
-		InsertEntry(previousEntry, shifting: true);
+		InsertEntry(previousEntry, ReplaceBehaviour.Throw, true);
 		
-		if (hasTail)
-		{
-			for (var k = 0; k < tailingEntries!.Length; k++)
-				InsertEntry(tailingEntries[k], shifting: true);
-		}
+		if (tailingEntries != null)
+			InsertEntries(tailingEntries, ReplaceBehaviour.Throw, true);
 
 		return true;
 	}
+
+	private Entry[]? TryGetAndClearTailingEntries(int bucketIndex)
+	{
+		if (!HasTail(bucketIndex))
+			return null;
+
+		var tailingEntries = new Entry[GetTailCount(bucketIndex)];
+		var i = 0;
+		var tailIndex = GetTailIndex(bucketIndex);
+
+		while (true)
+		{
+			ref var tailingBucket = ref _buckets[tailIndex];
+			tailingEntries[i++] = tailingBucket;
+			tailingBucket = default;
+
+			if (HasTail(tailIndex))
+			{
+				var nextTailIndex = GetTailIndex(tailIndex);
+				_tails.SetEmpty(tailIndex);
+				tailIndex = nextTailIndex;
+			}
+			else
+			{
+				_tails.SetEmpty(tailIndex);
+				break;
+			}
+		}
+
+		return tailingEntries;
+	}
+
+	// probably fails due to varying jump distances
+	/*private void EmplaceWithTailsForward(in Entry insertedEntry, int entryIndex)
+	{
+		var replacementEntry = insertedEntry;
+		
+		while (true)
+		{
+			if (entryIndex < 0)
+			{
+				InsertEntry(replacementEntry, false, true);
+				return;
+			}
+			
+			var tailIndex = HasTail(entryIndex) ? GetTailIndex(entryIndex) : -1;
+			var previousEntry = _buckets[entryIndex];
+
+			SetBucketEmpty(entryIndex);
+			InsertEntry(replacementEntry, false, true);
+
+			replacementEntry = previousEntry;
+			entryIndex = tailIndex;
+		}
+	}*/
 
 	[MethodImpl(MethodImplOptions.NoInlining)]
 	private void WarnForPossiblyExcessiveResizing(Entry entry)
@@ -617,7 +592,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		for (var i = 0; i < oldBuckets.Length; i++)
 		{
 			if (!IsBucketEmpty(i, oldTails, oldBuckets))
-				InsertEntry(oldBuckets[i], false, true);
+				InsertEntry(oldBuckets[i], ReplaceBehaviour.Throw, true);
 		}
 	}
 
@@ -664,6 +639,32 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 	}
 
 	[CollectionAccess(CollectionAccessType.Read | CollectionAccessType.UpdatedContent)]
+	public unsafe bool TryGetOrAddValue(TKey key, [MaybeNullWhen(false)] out TValue value)
+	{
+		var result = true;
+
+	StartOfLookup:
+		var bucketIndex = GetBucketIndex(key);
+		
+		while (true)
+		{
+			ref var bucket = ref _buckets[bucketIndex];
+
+			if (_keyEqualityComparer(key, bucket.Key))
+			{
+				value = bucket.Value!;
+				return result;
+			}
+
+			if (ContinueWithTailOrAddNew(ref bucketIndex, key))
+				continue;
+
+			result = false;
+			goto StartOfLookup;
+		}
+	}
+
+	[CollectionAccess(CollectionAccessType.Read | CollectionAccessType.UpdatedContent)]
 	public unsafe TValue GetOrAdd(TKey key)
 	{
 	StartOfMethod:
@@ -699,6 +700,11 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		}
 	}
 
+	/// <summary>
+	/// Returns a reference to a value field of an existing entry if one exists, otherwise to a new entry. This
+	/// reference is only valid until the next time the collection gets modified. An invalid reference gives undefined
+	/// behaviour and does not throw.
+	/// </summary>
 	[CollectionAccess(CollectionAccessType.Read | CollectionAccessType.UpdatedContent)]
 	public unsafe ref TValue GetOrAddReference(TKey key)
 	{
@@ -717,6 +723,11 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		}
 	}
 
+	/// <summary>
+	/// Returns a reference to a value field of an existing entry if one exists, otherwise to a new entry. This
+	/// reference is only valid until the next time the collection gets modified. An invalid reference gives undefined
+	/// behaviour and does not throw.
+	/// </summary>
 	[CollectionAccess(CollectionAccessType.Read | CollectionAccessType.UpdatedContent)]
 	public unsafe ref TValue GetOrAddReference(ref TKey key)
 	{
@@ -735,6 +746,11 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		}
 	}
 
+	/// <summary>
+	/// Returns a reference to a value field of an existing entry if one exists, otherwise throws a
+	/// KeyNotFoundException. This reference is only valid until the next time the collection gets modified. An invalid
+	/// reference gives undefined behaviour and does not throw.
+	/// </summary>
 	[CollectionAccess(CollectionAccessType.Read | CollectionAccessType.ModifyExistingContent)]
 	public unsafe ref TValue GetReference(TKey key)
 	{
@@ -751,6 +767,11 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		}
 	}
 
+	/// <summary>
+	/// Returns a reference to a value field of an existing entry if one exists, otherwise throws a
+	/// KeyNotFoundException. This reference is only valid until the next time the collection gets modified. An invalid
+	/// reference gives undefined behaviour and does not throw.
+	/// </summary>
 	[CollectionAccess(CollectionAccessType.Read | CollectionAccessType.ModifyExistingContent)]
 	public unsafe ref TValue GetReference(ref TKey key)
 	{
@@ -768,10 +789,11 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 	}
 
 	/// <summary>
-	/// Returns a reference to the value field of an entry if the key exists and an Unsafe.NullRef{TValue} if not.
-	/// Must be checked with Unsafe.IsNullRef before assigning to a regular var or field without ref.
+	/// Returns a reference to a value field of an existing entry if one exists, otherwise an Unsafe.NullRef{TValue}.
+	/// Unsafe.IsNullRef should be used to check for Unsafe.NullRef before assigning to a regular var or field without
+	/// ref. Regular null checks throw. The returned reference is only valid until the next time the collection gets
+	/// modified. An invalid reference gives undefined behaviour and does not throw.
 	/// </summary>
-	/// <param name="key">The key</param>
 	/// <returns>ref TValue or Unsafe.NullRef{TValue}</returns>
 	[CollectionAccess(CollectionAccessType.Read | CollectionAccessType.ModifyExistingContent)]
 	public unsafe ref TValue? TryGetReferenceUnsafe(TKey key)
@@ -790,6 +812,13 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		}
 	}
 
+	/// <summary>
+	/// Returns a reference to a value field of an existing entry if one exists, otherwise an Unsafe.NullRef{TValue}.
+	/// Unsafe.IsNullRef should be used to check for Unsafe.NullRef before assigning to a regular var or field without
+	/// ref. Regular null checks throw. The returned reference is only valid until the next time the collection gets
+	/// modified. An invalid reference gives undefined behaviour and does not throw.
+	/// </summary>
+	/// <returns>ref TValue or Unsafe.NullRef{TValue}</returns>
 	[CollectionAccess(CollectionAccessType.Read | CollectionAccessType.ModifyExistingContent)]
 	public unsafe ref TValue? TryGetReferenceUnsafe(ref TKey key)
 	{
@@ -824,6 +853,21 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		}
 	}
 
+	[CollectionAccess(CollectionAccessType.Read)]
+	public unsafe bool ContainsValue(TValue value)
+	{
+		var equalityComparer = Equals<TValue>.Default;
+		
+		var length = _buckets.Length;
+		for (var i = 0; i < length; i++)
+		{
+			if (!IsBucketEmpty(i) && equalityComparer(_buckets[i].Value!, value))
+				return true;
+		}
+
+		return false;
+	}
+
 	#region GetBucketIndexMethods
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -838,8 +882,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private int GetBucketIndexForKeyAt(int index) => GetBucketIndex(_buckets[index].Key);
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private int GetParentBucketIndex(int childBucketIndex)
+	private int GetParentBucketIndex(int childBucketIndex, bool throwOnFailure = true)
 	{
 		var ancestorIndex = GetBucketIndexForKeyAt(childBucketIndex);
 
@@ -847,9 +890,14 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 
 		while (true)
 		{
-			if (i++ > 32)
-				ThrowHelper.ThrowFailedToFindParentInvalidOperationException(this, childBucketIndex);
-			
+			if (i++ > 32 || !HasTail(ancestorIndex))
+			{
+				if (throwOnFailure)
+					ThrowHelper.ThrowFailedToFindParentInvalidOperationException(this, childBucketIndex);
+				else
+					return -1;
+			}
+
 			var nextIndex = GetTailIndex(ancestorIndex);
 			if (nextIndex == childBucketIndex)
 				break;
@@ -859,6 +907,8 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		
 		return ancestorIndex;
 	}
+
+	private bool HasParentBucket(int childBucketIndex) => GetParentBucketIndex(childBucketIndex, false) >= 0;
 
 	#endregion
 
@@ -874,7 +924,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		if (TryContinueWithTail(ref entryIndex))
 			return true;
 
-		this[key] = Reflection.New<TValue>();
+		this[key] = ValueInitializer(key);
 		return false;
 	}
 
@@ -888,7 +938,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		if (TryContinueWithTail(ref entryIndex))
 			return true;
 
-		this[key] = Reflection.New<TValue>();
+		this[key] = ValueInitializer(key);
 		return false;
 	}
 
@@ -931,7 +981,14 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 	public void Add(TKey key, TValue value)
 	{
 		Guard.IsNotNull(key);
-		InsertEntry(key, value, false);
+		InsertEntry(key, value, ReplaceBehaviour.Throw);
+	}
+
+	[CollectionAccess(CollectionAccessType.Read | CollectionAccessType.UpdatedContent)]
+	public bool TryAdd(TKey key, TValue value)
+	{
+		Guard.IsNotNull(key);
+		return InsertEntry(key, value, ReplaceBehaviour.Return);
 	}
 
 	[CollectionAccess(CollectionAccessType.ModifyExistingContent)]
@@ -944,39 +1001,68 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		return true;
 	}
 
-	private void EmplaceWithTails(int entryIndex)
+	[CollectionAccess(CollectionAccessType.ModifyExistingContent)]
+	public bool Remove(TKey key, out TValue? value)
 	{
-		ref var bucket = ref _buckets[entryIndex];
-		var entry = bucket;
-
-		Span<int> tailIndices = stackalloc int[GetTailCount(entryIndex)];
-
-		if (HasTail(entryIndex))
+		if (!RemoveInternal(key, out var removedEntry))
 		{
-			tailIndices[0] = GetTailIndex(entryIndex);
-			for (var i = 1; i < tailIndices.Length; i++)
-				tailIndices[i] = GetTailIndex(tailIndices[i - 1]);
+			value = default;
+			return false;
 		}
 		
-		if (IsTail(ref entry, entryIndex))
-			SetParentTail(entryIndex, Tails.SOLO);
-		
-		bucket = default;
-		_tails.SetEmpty(entryIndex);
-		InsertEntry(entry, shifting: true);
-		
-		for (var i = 1; i < tailIndices.Length; i++)
-		{
-			var tailIndex = tailIndices[i];
-			ref var tailBucket = ref _buckets[tailIndex];
-			var tailEntry = tailBucket;
+		value = removedEntry.Value!;
+		OnEntryRemoved(removedEntry.AsKeyValuePair());
+		return true;
+	}
 
-			tailBucket = default;
-			_tails.SetEmpty(tailIndex);
-			InsertEntry(tailEntry, shifting: true);
+	[CollectionAccess(CollectionAccessType.ModifyExistingContent)]
+	public int RemoveWhere(Predicate<KeyValuePair<TKey, TValue>> predicate)
+	{
+		Guard.IsNotNull(predicate);
+		
+		var removedCount = 0;
+		
+		var length = _buckets.Length;
+		for (var i = 0; i < length; i++)
+		{
+			if (IsBucketEmpty(i))
+				continue;
+
+			var entry = _buckets[i];
+
+			if (!predicate(entry.AsKeyValuePair()))
+				continue;
+
+			if (!Remove(entry.Key))
+				continue;
+			
+			removedCount++;
+			i--; // extra check in case of emplacement after removal
 		}
+		
+		return removedCount;
 	}
 	
+	private void EmplaceWithTailsBackward(int entryIndex)
+	{
+		if (IsBucketEmpty(entryIndex))
+			Utility.Diagnostics.ThrowHelper.ThrowInvalidOperationException("Tried to emplace entry bucket");
+		
+		while (true)
+		{
+			var tailIndex = HasTail(entryIndex) ? GetTailIndex(entryIndex) : -1;
+			var entry = _buckets[entryIndex];
+
+			SetBucketEmpty(entryIndex);
+			InsertEntry(entry, ReplaceBehaviour.Throw, true);
+
+			if (tailIndex < 0)
+				return;
+
+			entryIndex = tailIndex;
+		}
+	}
+
 	private unsafe bool RemoveInternal(TKey key, out Entry removedEntry, bool checkValue = false,
 		TValue? value = default)
 	{
@@ -984,30 +1070,24 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		
 		while (true)
 		{
-			ref var entry = ref _buckets[bucketIndex];
+			ref var bucket = ref _buckets[bucketIndex];
 				
-			if (_keyEqualityComparer(key, entry.Key))
+			if (_keyEqualityComparer(key, bucket.Key))
 			{
-				if (checkValue && !value.Equals<TValue>(entry.Value))
+				if (checkValue && !value.Equals<TValue>(bucket.Value))
 					goto OnFailure;
 
-				removedEntry = entry;
+				removedEntry = bucket;
 				
-				var tailIndex = -1;
-				if (IsTail(ref entry, bucketIndex))
-				{
-					if (HasTail(bucketIndex))
-						tailIndex = GetTailIndex(bucketIndex);
-					else
-						SetParentTail(bucketIndex, Tails.SOLO);
-				}
+				var tailIndex = HasTail(bucketIndex) ? GetTailIndex(bucketIndex) : -1;
+				
+				if (IsTail(ref bucket, bucketIndex))
+					SetParentTail(bucketIndex, Tails.SOLO);
 
-				entry.Key = default!;
-				entry.Value = default;
-				_tails.SetEmpty(bucketIndex);
+				SetBucketEmpty(bucketIndex);
 
 				if (tailIndex != -1)
-					EmplaceWithTails(tailIndex);
+					EmplaceWithTailsBackward(tailIndex);
 
 				return true;
 			}
@@ -1238,20 +1318,25 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 
 	#endregion
 
+#region enums
+	
+	private enum ReplaceBehaviour
+	{
+		Replace,
+		Throw,
+		Return
+	}
+	
+#endregion
+
 	#region Structs
 
 	// [StructLayout(LayoutKind.Sequential, Pack = 1)]
 	// matches KeyValuePair<T,V> and gets reinterpret cast into that in the Enumerator
-	internal struct Entry
+	internal struct Entry(TKey key, TValue? value)
 	{
-		public TKey Key;
-		public TValue? Value;
-
-		public Entry(TKey key, TValue? value)
-		{
-			Key = key;
-			Value = value;
-		}
+		public TKey Key = key;
+		public TValue? Value = value;
 
 		[Pure]
 		[UnscopedRef]
@@ -1259,19 +1344,33 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		[SecuritySafeCritical]
 		public ref KeyValuePair<TKey, TValue> AsKeyValuePair()
 			=> ref Unsafe.As<Entry, KeyValuePair<TKey, TValue>>(ref this);
+
+		public override string ToString()
+		{
+			using var stringBuilder = new PooledStringBuilder(42);
+			
+			return stringBuilder
+				.Append("FishTable<")
+				.Append(typeof(TKey))
+				.Append(", ")
+				.Append(typeof(TValue))
+				.Append(">.Entry { Key = ")
+				.Append<TKey>(Key)
+				.Append(", Value = ")
+				.Append<TValue>(Value)
+				.Append(" }").ToString();
+		}
 	}
 
-	internal struct Tails
+	internal struct Tails(uint length)
 	{
 		public const uint
 			EMPTY = 0u,
 			SOLO = 1u;
 		
-		private NibbleArray _values;
+		private NibbleArray _values = new(length);
 
 		public uint Length => _values.Length;
-
-		public Tails(uint length) => _values = new(length);
 
 		public uint this[uint index]
 		{
@@ -1399,6 +1498,180 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		}
 	}
 
+	[PublicAPI]
+	public readonly record struct KeyCollection(FishTable<TKey, TValue> Parent) : ICollection<TKey>, ICollection
+	{
+		public IEnumerator<TKey> GetEnumerator()
+		{
+			foreach (var entry in Parent)
+				yield return entry.Key;
+		}
+
+		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+		public bool Contains(TKey item) => Parent.ContainsKey(item);
+
+		public void CopyTo(TKey[] array, int arrayIndex)
+		{
+			foreach (var entry in Parent)
+				array[arrayIndex++] = entry.Key;
+		}
+
+		public void CopyTo(Array array, int index)
+		{
+			if (array is TKey[] typedArray)
+			{
+				CopyTo(typedArray, index);
+			}
+			else
+			{
+				foreach (var entry in Parent)
+					array.SetValue(entry.Key, index++);
+			}
+		}
+
+		public bool Remove(TKey item) => Parent.Remove(item);
+
+		public int RemoveWhere(Predicate<TKey> predicate)
+		{
+			Guard.IsNotNull(predicate);
+			
+			var removedCount = 0;
+			var buckets = Parent._buckets;
+			var tails = Parent._tails;
+			var length = buckets.Length;
+			
+			for (var i = 0; i < length; i++)
+			{
+				if (Parent.IsBucketEmpty(i, tails, buckets))
+					continue;
+
+				var entry = buckets[i];
+
+				if (!predicate(entry.Key))
+					continue;
+
+				if (!Parent.Remove(entry.Key))
+					continue;
+				
+				removedCount++;
+				i--; // extra check in case of emplacement after removal
+			}
+		
+			return removedCount;
+		}
+
+		public int Count => Parent.Count;
+
+		public bool IsReadOnly => true;
+
+		void ICollection<TKey>.Add(TKey item) => throw new NotSupportedException();
+
+		void ICollection<TKey>.Clear() => throw new NotSupportedException();
+
+		bool ICollection.IsSynchronized => false;
+
+		object ICollection.SyncRoot => throw new NotSupportedException();
+	}
+
+	[PublicAPI]
+	public readonly record struct ValueCollection(FishTable<TKey, TValue> Parent) : ICollection<TValue>, ICollection
+	{
+		public IEnumerator<TValue> GetEnumerator()
+		{
+			foreach (var entry in Parent)
+				yield return entry.Value;
+		}
+
+		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+		public bool Contains(TValue item) => Parent.ContainsValue(item);
+
+		public void CopyTo(TValue[] array, int arrayIndex)
+		{
+			foreach (var entry in Parent)
+				array[arrayIndex++] = entry.Value;
+		}
+
+		public void CopyTo(Array array, int index)
+		{
+			if (array is TValue[] typedArray)
+			{
+				CopyTo(typedArray, index);
+			}
+			else
+			{
+				foreach (var entry in Parent)
+					array.SetValue(entry.Value, index++);
+			}
+		}
+
+		public unsafe bool Remove(TValue item)
+		{
+			var buckets = Parent._buckets;
+			var tails = Parent._tails;
+			var equalityComparer = Equals<TValue>.Default;
+			var length = buckets.Length;
+			
+			for (var i = 0; i < length; i++)
+			{
+				if (Parent.IsBucketEmpty(i, tails, buckets))
+					continue;
+
+				var entry = buckets[i];
+
+				if (!equalityComparer(entry.Value!, item))
+					continue;
+
+				if (Parent.Remove(entry.Key))
+					return true;
+			}
+			
+			return false;
+		}
+
+		public int RemoveWhere(Predicate<TValue> predicate)
+		{
+			Guard.IsNotNull(predicate);
+			
+			var removedCount = 0;
+			var buckets = Parent._buckets;
+			var tails = Parent._tails;
+			var length = buckets.Length;
+			
+			for (var i = 0; i < length; i++)
+			{
+				if (Parent.IsBucketEmpty(i, tails, buckets))
+					continue;
+
+				var entry = buckets[i];
+
+				if (!predicate(entry.Value!))
+					continue;
+
+				if (!Parent.Remove(entry.Key))
+					continue;
+				
+				removedCount++;
+				i--; // extra check in case of emplacement after removal
+			}
+		
+			return removedCount;
+		}
+
+		public int Count => Parent.Count;
+
+		public bool IsReadOnly => true;
+
+		void ICollection<TValue>.Add(TValue item) => throw new NotSupportedException();
+
+		void ICollection<TValue>.Clear() => throw new NotSupportedException();
+
+		bool ICollection.IsSynchronized => false;
+
+		object ICollection.SyncRoot => throw new NotSupportedException();
+	}
+
 	#endregion
 
 	private static class ThrowHelper
@@ -1439,10 +1712,11 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		}
 
 		[DoesNotReturn]
-		internal static void ThrowAddingDuplicateWithKeyArgumentException<T>(T key)
+		internal static bool ThrowAddingDuplicateWithKeyArgumentException<T>(T key)
 		{
 			Guard.IsNotNull(key);
 			ThrowAddingDuplicateWithKeyArgumentException((object)key);
+			return true;
 		}
 		
 		[DoesNotReturn]
@@ -1461,10 +1735,50 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 			int childBucketIndex)
 		{
 			var entry = fishTable._buckets[childBucketIndex];
-			throw new InvalidOperationException($"Failed to find parent index in FishTable for key: '{
-				entry.Key}', hashCode: '{fishTable._keyHashCodeGetter(entry.Key)}', value: '{entry.Value}', count: '{
-					fishTable._count}', bucket array length: '{fishTable._buckets.Length}', tailing entries: '{
-						fishTable.GetTailingEntriesCount()}'");
+			using var stringBuilder = new PooledStringBuilder(227);
+			
+			stringBuilder
+				.Append("Failed to find parent index in FishTable<")
+				.Append(typeof(TKey))
+				.Append(", ")
+				.Append(typeof(TValue))
+				.Append("> for key: '")
+				.Append<TKey>(entry.Key)
+				.Append("', hashCode: '")
+				.Append(fishTable._keyHashCodeGetter(entry.Key))
+				.Append("', value: '")
+				.Append<TValue>(entry.Value)
+				.Append("', count: '")
+				.Append(fishTable._count)
+				.Append("', bucket array length: '")
+				.Append(fishTable._buckets.Length)
+				.Append("', total tailing entries count: '")
+				.Append(fishTable.GetTailingEntriesCount())
+				.Append("', known chain of tails:");
+
+			var ancestorIndex = fishTable.GetBucketIndexForKeyAt(childBucketIndex);
+			var i = 0;
+			while (true)
+			{
+				var tailEntry = fishTable._buckets[ancestorIndex];
+
+				stringBuilder.Append("\n{ index: '")
+					.Append(ancestorIndex)
+					.Append("' key: '")
+					.Append<TKey>(tailEntry.Key)
+					.Append("', hashCode: '")
+					.Append(fishTable._keyHashCodeGetter(tailEntry.Key))
+					.Append("', value: '")
+					.Append<TValue>(tailEntry.Value)
+					.Append(fishTable._tails.IsEmpty(ancestorIndex) ? " (empty) }" : " }");
+				
+				if (i++ > 32 || !fishTable.HasTail(ancestorIndex))
+					break;
+			
+				ancestorIndex = fishTable.GetTailIndex(ancestorIndex);
+			}
+			
+			throw new InvalidOperationException(stringBuilder.ToString());
 		}
 
 		[DoesNotReturn]

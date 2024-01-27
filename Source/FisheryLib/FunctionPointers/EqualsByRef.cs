@@ -3,6 +3,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Security;
@@ -16,6 +17,7 @@ public static class EqualsByRef<T>
 		= (delegate*<ref T, ref T, bool>)EqualsByRef.EqualsMethods.GetFunctionPointer(typeof(T));
 }
 
+[SuppressMessage("Naming", "CA1720")]
 public static class EqualsByRef
 {
 	[UsedImplicitly(ImplicitUseTargetFlags.Members)]
@@ -37,6 +39,8 @@ public static class EqualsByRef
 		public static bool IntPtr(ref IntPtr x, ref IntPtr y) => x == y;
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		[SuppressMessage("Globalization", "CA1307")]
+		[SuppressMessage("Globalization", "CA1309")]
 		public static bool String(ref string x, ref string y) => string.Equals(x, y);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]

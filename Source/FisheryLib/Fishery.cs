@@ -14,20 +14,38 @@ global using CodeInstructions = System.Collections.Generic.IEnumerable<HarmonyLi
 using System.Security;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using JetBrains.Annotations;
 
 [assembly: AllowPartiallyTrustedCallers]
 [assembly: SecurityRules(SecurityRuleSet.Level2, SkipVerificationInFullTrust = true)]
 [assembly: Debuggable(false, false)]
+[assembly: AssemblyVersion(FisheryLib.FisheryLib.VERSION_STRING)]
 
 [module: SkipLocalsInit]
 
 namespace FisheryLib;
 
+[PublicAPI]
 public static class FisheryLib
 {
-	public const decimal VERSION = 0.380085M;
+	public const decimal VERSION = 0.39995M;
 
 	public static decimal CurrentlyLoadedVersion { get; } = VERSION;
+
+	public const string VERSION_STRING = "0.3.999.5";
+
+	// public static string GetVersion()
+	// {
+	// 	var text = File.ReadAllText("Fishery.cs");
+	// 	const string VERSION_FIELD_NAME = "VERSION_STRING = \"";
+	// 	var versionIndex = text.IndexOf(VERSION_FIELD_NAME, StringComparison.InvariantCulture);
+	// 	versionIndex += VERSION_FIELD_NAME.Length;
+	// 	var versionEndIndex = versionIndex;
+	// 	while (text[versionEndIndex] != '"')
+	// 		versionEndIndex++;
+	//
+	// 	return text.Substring(versionIndex, versionEndIndex - versionIndex);
+	// }
 }
 
 /*namespace FisheryLib;

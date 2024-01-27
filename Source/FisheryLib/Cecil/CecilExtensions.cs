@@ -3,9 +3,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
 using Mono.Collections.Generic;
 using Verse;
 using CallSite = Mono.Cecil.CallSite;
@@ -334,8 +337,8 @@ public static class CecilExtensions
 	
 	public static void ReplaceBodyWith(this ILProcessor ilProcessor, MethodInfo replacement)
 	{
-		var oldBody = ilProcessor.Body;
-		var module = oldBody.Method.Module;
+		var targetBody = ilProcessor.Body;
+		var module = targetBody.Method.Module;
 
 		if (replacement.IsGenericMethod)
 			replacement = replacement.GetGenericMethodDefinition();
@@ -348,26 +351,40 @@ public static class CecilExtensions
 
 		var newMethodReference = module.ImportReference(replacement);
 		var newBody = newMethodReference.Resolve().Body;
+		
+		newBody.SimplifyMacros();
+		MethodBodyRocks.ComputeOffsets(newBody);
 
-		oldBody.Instructions.Clear();
+		var targetInstructions = targetBody.instructions;
+		targetInstructions.Clear();
+		
 		foreach (var instruction in newBody.instructions)
 		{
-			oldBody.Instructions.Add(new(instruction.OpCode, instruction.Operand switch
+			targetInstructions.Add(new(instruction.OpCode, instruction.Operand switch
 			{
 				FieldReference field => module.ImportReference(field, newMethodReference),
 				MethodReference method => module.ImportReference(method, newMethodReference),
 				TypeReference type => module.ImportReference(type, newMethodReference),
+				ParameterReference parameter => targetBody.GetParameter(parameter.Index),
 				_ => instruction.Operand
 			}));
 		}
+		
+		MethodBodyRocks.ComputeOffsets(targetBody);
+		
+		foreach (var instruction in targetInstructions)
+		{
+			if (instruction.Operand is Instruction operand)
+				instruction.Operand = targetInstructions.First(ti => ti.Offset == operand.Offset);
+		}
 
-		oldBody.Variables.Clear();
+		targetBody.Variables.Clear();
 		foreach (var variable in newBody.Variables)
-			oldBody.Variables.Add(new(module.ImportReference(variable.VariableType, newMethodReference)));
+			targetBody.Variables.Add(new(module.ImportReference(variable.VariableType, newMethodReference)));
 
-		oldBody.MaxStackSize = newBody.MaxStackSize;
+		targetBody.MaxStackSize = newBody.MaxStackSize;
 
-		oldBody.ExceptionHandlers.Clear();
+		targetBody.ExceptionHandlers.Clear();
 		foreach (var exceptionHandler in newBody.ExceptionHandlers)
 		{
 			var handler = new ExceptionHandler(exceptionHandler.HandlerType)
@@ -382,10 +399,13 @@ public static class CecilExtensions
 			if (exceptionHandler.CatchType is { } catchType)
 				handler.CatchType = module.ImportReference(catchType, newMethodReference);
 			
-			oldBody.ExceptionHandlers.Add(handler);
+			targetBody.ExceptionHandlers.Add(handler);
 		}
 
-		oldBody.Method.ImplAttributes = newBody.Method.ImplAttributes;
+		targetBody.Method.ImplAttributes = newBody.Method.ImplAttributes;
+		
+		targetBody.OptimizeMacros();
+		newBody.OptimizeMacros();
 	}
 
 	public static MethodDefinition GetMethod(this ILProcessor ilProcessor) => ilProcessor.Body.Method;
@@ -533,6 +553,7 @@ public static class CecilExtensions
 			// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
 			$"Argument is of invalid type: {instruction?.GetType().FullName ?? "NULL"}");
 
+	[SuppressMessage("Maintainability", "CA1508")]
 	private static Instruction CreateInstruction(OpCode opCode, object operand)
 		=> operand switch
 		{
@@ -554,6 +575,7 @@ public static class CecilExtensions
 			ParameterDefinition parameter => Instruction.Create(opCode, parameter),
 			_ => ThrowHelper.ThrowArgumentException<Instruction>(nameof(operand),
 				// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
-				$"Operand for OpCode {opCode} is of invalid type: {operand?.GetType().FullName ?? "NULL"}")
+				$"Operand for OpCode {opCode} is of invalid type: {
+					operand?.GetType().FullName ?? operand?.GetType().Name ?? "NULL"}")
 		};
 }

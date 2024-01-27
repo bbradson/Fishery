@@ -9,7 +9,7 @@ using JetBrains.Annotations;
 namespace FisheryLib.Collections;
 
 [PublicAPI]
-public struct NibbleArray
+public record struct NibbleArray
 {
 	private uint _length;
 	private byte[] _data;

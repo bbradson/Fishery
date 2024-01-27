@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 using System.Security;
 using System.Text;
 using System.Threading.Tasks;
+using FisheryLib.Pools;
 using JetBrains.Annotations;
 using Verse;
 
@@ -20,6 +21,9 @@ namespace FisheryLib;
 [PublicAPI]
 public static class Reflection
 {
+	private static Assembly[] _allAssemblies = Array.Empty<Assembly>();
+	private static object _allAssembliesLock = new();
+
 	public static CodeInstructions GetCodeInstructions(Delegate method, ILGenerator? generator = null)
 		=> GetCodeInstructions(method.Method, generator);
 
@@ -43,7 +47,37 @@ public static class Reflection
 		yield return FishTranspiler.Return;
 	}
 
-	public static Type? Type(string assembly, string type) => System.Type.GetType($"{type}, {assembly}");
+	public static Assembly[] AllAssemblies
+	{
+		get
+		{
+			lock (_allAssembliesLock)
+			{
+				return _allAssemblies.Length == AppDomain.CurrentDomain.GetAssemblies().Length
+					? _allAssemblies
+					: _allAssemblies = AccessTools.AllAssemblies().ToArray();
+			}
+		}
+	}
+
+	public static Type? Type(string assembly, string typeFullName)
+		=> System.Type.GetType(string.Concat(typeFullName, ", ", assembly));
+
+	public static Type? Type(string assembly, string @namespace, string type)
+		=> System.Type.GetType(StringHelper.Resolve($"{@namespace}.{type}, {assembly}"));
+
+	public static Type? Type(string fullName)
+	{
+		var assemblies = AllAssemblies;
+
+		for (var i = assemblies.Length; i-- > 0;)
+		{
+			if (assemblies[i].GetType(fullName) is { } type)
+				return type;
+		}
+
+		return null;
+	}
 
 	public static MethodInfo MethodInfo<T>(T method) where T : Delegate => method.Method;
 
@@ -323,7 +357,8 @@ public static class Reflection
 		if (memberInfo is null)
 			return "NULL";
 
-		var stringBuilder = new StringBuilder();
+		using var pooledStringBuilder = new PooledStringBuilder();
+		var stringBuilder = pooledStringBuilder.Builder;
 
 		switch (memberInfo)
 		{
@@ -346,7 +381,7 @@ public static class Reflection
 		if (memberInfo is PropertyInfo propertyInfo1)
 			AppendPropertyPostfix(stringBuilder, propertyInfo1);
 
-		return stringBuilder.ToString();
+		return pooledStringBuilder.ToString();
 	}
 
 	private static void AppendFieldPrefix(FieldInfo fieldInfo, StringBuilder stringBuilder)

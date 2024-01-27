@@ -145,7 +145,8 @@ public static class CollectionExtensions
 	{
 		if (dictionary.buckets != null)
 		{
-			var keyCode = HashCode.Get(key) & 0x7FFFFFFF; // HashCode.Get can handle null, & 0x7FFFFFFF removes any sign
+			var keyCode = HashCode.Get(key) & int.MaxValue;
+			// HashCode.Get can handle null, & int.MaxValue removes any sign
 
 			var bucket = dictionary.buckets[keyCode % dictionary.buckets.Length];
 			while (bucket >= 0)
@@ -165,7 +166,7 @@ public static class CollectionExtensions
 	{
 		if (dictionary.buckets != null)
 		{
-			var keyCode = HashCode.Get(ref key) & 0x7FFFFFFF;
+			var keyCode = HashCode.Get(ref key) & int.MaxValue;
 
 			var bucket = dictionary.buckets[keyCode % dictionary.buckets.Length];
 			while (bucket >= 0)
@@ -192,7 +193,7 @@ public static class CollectionExtensions
 	{
 		if (dictionary.buckets != null)
 		{
-			var keyCode = HashCode.Get(key) & 0x7FFFFFFF;
+			var keyCode = HashCode.Get(key) & int.MaxValue;
 
 			var bucket = dictionary.buckets[keyCode % dictionary.buckets.Length];
 			while (bucket >= 0)
@@ -212,7 +213,7 @@ public static class CollectionExtensions
 	{
 		if (dictionary.buckets != null)
 		{
-			var keyCode = HashCode.Get(ref key) & 0x7FFFFFFF;
+			var keyCode = HashCode.Get(ref key) & int.MaxValue;
 
 			var bucket = dictionary.buckets[keyCode % dictionary.buckets.Length];
 			while (bucket >= 0)
@@ -232,7 +233,7 @@ public static class CollectionExtensions
 	{
 		if (dictionary.buckets != null)
 		{
-			var keyCode = HashCode.Get(ref key) & 0x7FFFFFFF;
+			var keyCode = HashCode.Get(ref key) & int.MaxValue;
 
 			var bucket = dictionary.buckets[keyCode % dictionary.buckets.Length];
 			while (bucket >= 0)
@@ -253,7 +254,7 @@ public static class CollectionExtensions
 	{
 		if (dictionary.buckets != null)
 		{
-			var keyCode = HashCode.Get(key) & 0x7FFFFFFF;
+			var keyCode = HashCode.Get(key) & int.MaxValue;
 
 			var bucket = dictionary.buckets[keyCode % dictionary.buckets.Length];
 			while (bucket >= 0)
@@ -273,7 +274,7 @@ public static class CollectionExtensions
 	public static ref TValue GetOrAddReference<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key)
 		where TValue : new()
 	{
-		var keyCode = HashCode.Get(key) & 0x7FFFFFFF;
+		var keyCode = HashCode.Get(key) & int.MaxValue;
 		
 	StartOfLookup:
 		if (dictionary.buckets != null)
@@ -297,7 +298,7 @@ public static class CollectionExtensions
 	public static ref TValue GetOrAddReference<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, ref TKey key)
 		where TValue : new()
 	{
-		var keyCode = HashCode.Get(ref key) & 0x7FFFFFFF;
+		var keyCode = HashCode.Get(ref key) & int.MaxValue;
 
 	StartOfLookup:
 		if (dictionary.buckets != null)
@@ -320,7 +321,7 @@ public static class CollectionExtensions
 	// public static bool TryGetOrAddReference<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key,
 	// 	ref TValue reference)
 	// {
-	// 	var keyCode = HashCode.Get(ref key) & 0x7FFFFFFF;
+	// 	var keyCode = HashCode.Get(ref key) & int.MaxValue;
 	// 	var result = true;
 	//
 	// StartOfLookup:
@@ -349,7 +350,7 @@ public static class CollectionExtensions
 	public static TValue GetOrAdd<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key)
 		where TValue : new()
 	{
-		var keyCode = HashCode.Get(key) & 0x7FFFFFFF;
+		var keyCode = HashCode.Get(key) & int.MaxValue;
 
 	StartOfLookup:
 		if (dictionary.buckets != null)
@@ -373,7 +374,7 @@ public static class CollectionExtensions
 	public static TValue GetOrAdd<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, ref TKey key)
 		where TValue : new()
 	{
-		var keyCode = HashCode.Get(ref key) & 0x7FFFFFFF;
+		var keyCode = HashCode.Get(ref key) & int.MaxValue;
 
 	StartOfLookup:
 		if (dictionary.buckets != null)
@@ -396,7 +397,7 @@ public static class CollectionExtensions
 	public static bool TryGetOrAddValue<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key,
 		out TValue value)
 	{
-		var keyCode = HashCode.Get(ref key) & 0x7FFFFFFF;
+		var keyCode = HashCode.Get(ref key) & int.MaxValue;
 		var result = true;
 
 	StartOfLookup:
@@ -419,6 +420,38 @@ public static class CollectionExtensions
 		result = false;
 		dictionary.Add(key, Reflection.New<TValue>());
 		goto StartOfLookup;
+	}
+
+	public static int RemoveWhere<TKey, TValue>(this Dictionary<TKey, TValue> dictionary,
+		Predicate<KeyValuePair<TKey, TValue>> predicate)
+	{
+		Guard.IsNotNull(dictionary);
+		Guard.IsNotNull(predicate);
+
+		var entries = dictionary.entries;
+		if (entries is null)
+			return 0;
+		
+		var removedCount = 0;
+		var entriesCount = entries.Length;
+		
+		for (var i = 0; i < entriesCount; i++)
+		{
+			ref var entry = ref entries[i];
+			if (entry.hashCode < 0) // valid entries are stored with & int.MaxValue on hashCode
+				continue;
+
+			// predicate might modify collection, turning a ref invalid
+			var keyValuePair = new KeyValuePair<TKey,TValue>(entry.key, entry.value);
+			
+			if (!predicate(keyValuePair))
+				continue;
+
+			if (dictionary.Remove(keyValuePair.Key))
+				removedCount++;
+		}
+
+		return removedCount;
 	}
 
 	[DoesNotReturn]
@@ -640,7 +673,28 @@ public static class CollectionExtensions
 	public static StringBuilder Append(this StringBuilder builder, List<char> value)
 		=> builder.Append(value._items, 0, value._size);
 
-	public static ref T GetReferenceUnverifiable<T>(this List<T> list, int index) => ref list._items[index];
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static StringBuilder Append<T>(this StringBuilder builder, T? value)
+		// ReSharper disable once RedundantToStringCallForValueType
+		// ReSharper disable once CompareNonConstrainedGenericWithNull
+		// ReSharper disable once HeapView.PossibleBoxingAllocation
+		=> value == null ? builder : builder.Append(value.ToString());
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static ref T GetReference<T>(this List<T> list, int index)
+	{
+		Guard.IsInRange(index, 0, list.Count);
+
+		list._version++;
+		return ref list._items[index];
+	}
+
+	[Obsolete("Renamed to GetReferenceUnsafe")]
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static ref T GetReferenceUnverifiable<T>(this List<T> list, int index) => ref list.GetReferenceUnsafe(index);
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static ref T GetReferenceUnsafe<T>(this List<T> list, int index) => ref list._items[index];
 
 	public static IList TryNew(IEnumerable enumerable, Type type) => GetListExtensionMethods(type).New(enumerable);
 
@@ -648,6 +702,40 @@ public static class CollectionExtensions
 		=> GetListExtensionMethods(type).AddRange(list, collection);
 
 	public static Array TryToArray(this IList list, Type type) => GetListExtensionMethods(type).ToArray(list);
+	
+	public static void RemoveAtFastUnordered<T>(this List<T> list, int index)
+	{
+		ref var lastBucket = ref list._items[list._size - 1];
+		list[index] = lastBucket;
+		lastBucket = default!;
+		list._size--;
+	}
+	
+	public static bool RemoveFastUnordered<T>(this List<T> list, T item)
+	{
+		var index = list.IndexOf(item);
+		if (index < 0)
+			return false;
+		
+		list.RemoveAtFastUnordered(index);
+		return true;
+	}
+
+	public static void InsertFastUnordered<T>(this List<T> list, int index, T item)
+	{
+		if ((uint) index > (uint) list._size)
+			ThrowHelper.ThrowArgumentOutOfRangeException();
+		
+		if (list._size == list._items.Length)
+			list.EnsureCapacity(list._size + 1);
+
+		ref var targetBucket = ref list._items[index];
+		
+		list._items[list._size] = targetBucket;
+		targetBucket = item;
+		list._size++;
+		list._version++;
+	}
 	
 	public static unsafe uint GetSizeEstimate<TKey, TValue>(this Dictionary<TKey, TValue> dictionary)
 		=> dictionary.GetType().ComputeManagedObjectSizeEstimate()
@@ -657,7 +745,8 @@ public static class CollectionExtensions
 	internal static unsafe uint ComputeManagedObjectSizeEstimate(this Type type)
 	{
 		var objectHeader = (uint)sizeof(void*) * 2u;
-		ref var cachedSize = ref CachedManagedObjectSizes.GetOrAddReference(type.TypeHandle.Value);
+		var cachedSize = CachedManagedObjectSizes.GetOrAdd(type.TypeHandle.Value);
+		// can't use GetOrAddReference here due to recursion
 
 		if (cachedSize.Size == uint.MaxValue)
 			UpdateCachedManagedObjectSize(type, ref cachedSize);
@@ -689,6 +778,8 @@ public static class CollectionExtensions
 		var remainder = cachedSize.Size % (uint)IntPtr.Size;
 		if (remainder != 0u)
 			cachedSize.Size += (uint)IntPtr.Size - remainder;
+
+		CachedManagedObjectSizes[type.TypeHandle.Value] = cachedSize;
 	}
 
 	private static FishTable<IntPtr, ManagedObjectSize> CachedManagedObjectSizes => _cachedManagedObjectSizes ??= new();

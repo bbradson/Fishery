@@ -23,6 +23,7 @@ internal static class UtilityF
 	}
 
 	[DoesNotReturn]
+	[SuppressMessage("Usage", "CA2201")]
 	internal static void Throw(string message) => throw new(message);
 
 	[DoesNotReturn]
@@ -37,10 +38,10 @@ internal static class UtilityF
 
 		for (var i = 0; i < stacktrace.FrameCount; i++)
 		{
-			var assembly = stacktrace.GetFrame(i).GetMethod().ReflectedType.Assembly;
+			var assembly = stacktrace.GetFrame(i).GetMethod().ReflectedType?.Assembly;
 			fishAssembly ??= assembly;
 
-			if (assembly != fishAssembly)
+			if (assembly != fishAssembly && assembly != null)
 				return assembly;
 		}
 

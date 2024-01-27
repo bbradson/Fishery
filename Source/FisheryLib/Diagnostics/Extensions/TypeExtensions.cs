@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
@@ -15,7 +16,8 @@ public static class TypeExtensions
 	/// <summary>
 	/// The mapping of built-in types to their simple representation.
 	/// </summary>
-	private static readonly IReadOnlyDictionary<Type, string> BuiltInTypesMap = new Dictionary<Type, string>
+	[SuppressMessage("Performance", "CA1859")]
+	private static readonly IReadOnlyDictionary<Type, string> _builtInTypesMap = new Dictionary<Type, string>
 	{
 		[typeof(bool)] = "bool",
 		[typeof(byte)] = "byte",
@@ -38,7 +40,7 @@ public static class TypeExtensions
 	/// <summary>
 	/// A thread-safe mapping of precomputed string representation of types.
 	/// </summary>
-	private static readonly ConditionalWeakTable<Type, string> DisplayNames = new();
+	private static readonly ConditionalWeakTable<Type, string> _displayNames = new();
 
 	/// <summary>
 	/// Returns a simple string representation of a type.
@@ -51,7 +53,7 @@ public static class TypeExtensions
 		static string FormatDisplayString(Type type, int genericTypeOffset, ReadOnlySpan<Type> typeArguments)
 		{
 			// Primitive types use the keyword name
-			if (BuiltInTypesMap.TryGetValue(type, out var typeName))
+			if (_builtInTypesMap.TryGetValue(type, out var typeName))
 				return typeName!;
 
 			// Array types are displayed as Foo[]
@@ -131,7 +133,7 @@ public static class TypeExtensions
 		}
 
 		// Atomically get or build the display string for the current type.
-		return DisplayNames.GetValue(type, static t =>
+		return _displayNames.GetValue(type, static t =>
 		{
 			// By-ref types are displayed as T&
 			if (t.IsByRef)

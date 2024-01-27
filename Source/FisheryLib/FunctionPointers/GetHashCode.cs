@@ -3,6 +3,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
 
@@ -14,6 +15,7 @@ public static class GetHashCode<T>
 		= (delegate*<T, int>)FunctionPointers.GetHashCode.HashCodeMethods.GetFunctionPointer(typeof(T));
 }
 
+[SuppressMessage("Naming", "CA1720")]
 public static class GetHashCode
 {
 	[UsedImplicitly(ImplicitUseTargetFlags.Members)]

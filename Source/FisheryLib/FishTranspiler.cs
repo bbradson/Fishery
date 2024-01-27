@@ -3,6 +3,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
@@ -200,6 +201,7 @@ public static class FishTranspiler
 
 		public static bool operator !=(CodeInstruction code, Container helper) => !(helper == code);
 
+		[SuppressMessage("Usage", "CA2225")]
 		public static implicit operator CodeInstruction(Container helper) => helper.ToInstruction();
 
 		//public static implicit operator Container(CodeInstruction instruction)
@@ -701,13 +703,15 @@ public static class FishTranspiler
 	/// Pushes a supplied value of type int32 onto the evaluation stack as an int32.
 	/// </summary>
 	/// <param name="integer">The value to push onto the evaluation stack</param>
-	public static Container Constant(int integer) => new(GetLoadConstantOpCode(integer), GetOperandOfConstant(integer));
+	public static Container Constant([SuppressMessage("Naming", "CA1720")] int integer)
+		=> new(GetLoadConstantOpCode(integer), GetOperandOfConstant(integer));
 
 	/// <summary>
 	/// Pushes a supplied value of type int64 onto the evaluation stack as an int64.
 	/// </summary>
 	/// <param name="integer">The value to push onto the evaluation stack</param>
-	public static Container Constant(long integer) => new(OpCodes.Ldc_I8, integer);
+	public static Container Constant([SuppressMessage("Naming", "CA1720")] long integer)
+		=> new(OpCodes.Ldc_I8, integer);
 
 	/// <summary>
 	/// Pushes a supplied value of type float32 onto the evaluation stack as type F (float).
@@ -1129,6 +1133,7 @@ public static class FishTranspiler
 	/// Pushes a new object reference to a string literal stored in the metadata.
 	/// </summary>
 	/// <param name="text">The string literal</param>
+	[SuppressMessage("Naming", "CA1720")]
 	public static Container String(string text)
 	{
 		Guard.IsNotNull(text);
@@ -2425,72 +2430,34 @@ public static class FishTranspiler
 
 	public static bool StoresElement(this OpCode opcode) => StoreElementOpCodes.Contains(opcode);
 
-	public static readonly HashSet<OpCode> LoadElementOpCodes
-		= new()
-		{
-			OpCodes.Ldelem,
-			OpCodes.Ldelema,
-			OpCodes.Ldelem_I,
-			OpCodes.Ldelem_I1,
-			OpCodes.Ldelem_I2,
-			OpCodes.Ldelem_I4,
-			OpCodes.Ldelem_I8,
-			OpCodes.Ldelem_R4,
-			OpCodes.Ldelem_R8,
-			OpCodes.Ldelem_Ref,
-			OpCodes.Ldelem_U1,
-			OpCodes.Ldelem_U2,
-			OpCodes.Ldelem_U4
-		};
+	public static readonly HashSet<OpCode> LoadElementOpCodes =
+	[
+		OpCodes.Ldelem, OpCodes.Ldelema, OpCodes.Ldelem_I, OpCodes.Ldelem_I1, OpCodes.Ldelem_I2, OpCodes.Ldelem_I4,
+		OpCodes.Ldelem_I8, OpCodes.Ldelem_R4, OpCodes.Ldelem_R8, OpCodes.Ldelem_Ref, OpCodes.Ldelem_U1,
+		OpCodes.Ldelem_U2, OpCodes.Ldelem_U4
+	];
 
-	public static readonly HashSet<OpCode> StoreElementOpCodes
-		= new()
-		{
-			OpCodes.Stelem,
-			OpCodes.Stelem_I,
-			OpCodes.Stelem_I1,
-			OpCodes.Stelem_I2,
-			OpCodes.Stelem_I4,
-			OpCodes.Stelem_I8,
-			OpCodes.Stelem_R4,
-			OpCodes.Stelem_R8,
-			OpCodes.Stelem_Ref
-		};
+	public static readonly HashSet<OpCode> StoreElementOpCodes =
+	[
+		OpCodes.Stelem, OpCodes.Stelem_I, OpCodes.Stelem_I1, OpCodes.Stelem_I2, OpCodes.Stelem_I4,
+		OpCodes.Stelem_I8, OpCodes.Stelem_R4, OpCodes.Stelem_R8, OpCodes.Stelem_Ref
+	];
 
 	public static bool LoadsByRef(this OpCode opcode) => LoadByRefOpCodes.Contains(opcode);
 
 	public static bool StoresByRef(this OpCode opcode) => StoreByRefOpCodes.Contains(opcode);
 
-	public static readonly HashSet<OpCode> LoadByRefOpCodes
-		= new()
-		{
-			OpCodes.Ldobj,
-			OpCodes.Ldind_I,
-			OpCodes.Ldind_I1,
-			OpCodes.Ldind_I2,
-			OpCodes.Ldind_I4,
-			OpCodes.Ldind_I8,
-			OpCodes.Ldind_R4,
-			OpCodes.Ldind_R8,
-			OpCodes.Ldind_Ref,
-			OpCodes.Ldind_U1,
-			OpCodes.Ldind_U2,
-			OpCodes.Ldind_U4
-		};
+	public static readonly HashSet<OpCode> LoadByRefOpCodes =
+	[
+		OpCodes.Ldobj, OpCodes.Ldind_I, OpCodes.Ldind_I1, OpCodes.Ldind_I2, OpCodes.Ldind_I4, OpCodes.Ldind_I8,
+		OpCodes.Ldind_R4, OpCodes.Ldind_R8, OpCodes.Ldind_Ref, OpCodes.Ldind_U1, OpCodes.Ldind_U2, OpCodes.Ldind_U4
+	];
 
-	public static readonly HashSet<OpCode> StoreByRefOpCodes
-		= new()
-		{
-			OpCodes.Stobj,
-			OpCodes.Stind_I,
-			OpCodes.Stind_I1,
-			OpCodes.Stind_I2,
-			OpCodes.Stind_I4,
-			OpCodes.Stind_I8,
-			OpCodes.Stind_R4,
-			OpCodes.Stind_R8,
-			OpCodes.Stind_Ref
-		};
+	public static readonly HashSet<OpCode> StoreByRefOpCodes =
+	[
+		OpCodes.Stobj, OpCodes.Stind_I, OpCodes.Stind_I1, OpCodes.Stind_I2, OpCodes.Stind_I4, OpCodes.Stind_I8,
+		OpCodes.Stind_R4, OpCodes.Stind_R8, OpCodes.Stind_Ref
+	];
 
 	public static bool LoadsField(this OpCode opcode) => opcode.LoadsInstanceField() || opcode.LoadsStaticField();
 
@@ -2538,100 +2505,38 @@ public static class FishTranspiler
 	public static bool Compares(this OpCode opcode) => CompareOpCodes.Contains(opcode);
 
 	public static readonly HashSet<OpCode> CompareOpCodes
-		= new()
-		{
-			OpCodes.Ceq,
-			OpCodes.Cgt,
-			OpCodes.Cgt_Un,
-			OpCodes.Clt,
-			OpCodes.Clt_Un
-		};
+		= [OpCodes.Ceq, OpCodes.Cgt, OpCodes.Cgt_Un, OpCodes.Clt, OpCodes.Clt_Un];
 
 	public static bool Computes(this OpCode opcode) => ComputeOpCodes.Contains(opcode);
 
-	public static readonly HashSet<OpCode> ComputeOpCodes
-		= new()
-		{
-			OpCodes.Add,
-			OpCodes.Add_Ovf,
-			OpCodes.Add_Ovf_Un,
-			OpCodes.Sub,
-			OpCodes.Sub_Ovf,
-			OpCodes.Sub_Ovf_Un,
-			OpCodes.Mul,
-			OpCodes.Mul_Ovf,
-			OpCodes.Mul_Ovf_Un,
-			OpCodes.Div,
-			OpCodes.Div_Un,
-			OpCodes.Rem,
-			OpCodes.Rem_Un,
-			OpCodes.And,
-			OpCodes.Or,
-			OpCodes.Xor,
-			OpCodes.Shl,
-			OpCodes.Shr,
-			OpCodes.Shr_Un,
-			OpCodes.Not,
-			OpCodes.Neg
-		};
+	public static readonly HashSet<OpCode> ComputeOpCodes =
+	[
+		OpCodes.Add, OpCodes.Add_Ovf, OpCodes.Add_Ovf_Un, OpCodes.Sub, OpCodes.Sub_Ovf, OpCodes.Sub_Ovf_Un,
+		OpCodes.Mul, OpCodes.Mul_Ovf, OpCodes.Mul_Ovf_Un, OpCodes.Div, OpCodes.Div_Un, OpCodes.Rem, OpCodes.Rem_Un,
+		OpCodes.And, OpCodes.Or, OpCodes.Xor, OpCodes.Shl, OpCodes.Shr, OpCodes.Shr_Un, OpCodes.Not, OpCodes.Neg
+	];
 
 	public static bool Converts(this OpCode opcode) => ConvertOpCodes.Contains(opcode);
 
-	public static readonly HashSet<OpCode> ConvertOpCodes
-		= new()
-		{
-			OpCodes.Conv_I,
-			OpCodes.Conv_I1,
-			OpCodes.Conv_I2,
-			OpCodes.Conv_I4,
-			OpCodes.Conv_I8,
-			OpCodes.Conv_Ovf_I,
-			OpCodes.Conv_Ovf_I1,
-			OpCodes.Conv_Ovf_I1_Un,
-			OpCodes.Conv_Ovf_I2,
-			OpCodes.Conv_Ovf_I2_Un,
-			OpCodes.Conv_Ovf_I4,
-			OpCodes.Conv_Ovf_I4_Un,
-			OpCodes.Conv_Ovf_I8,
-			OpCodes.Conv_Ovf_I8_Un,
-			OpCodes.Conv_Ovf_I_Un,
-			OpCodes.Conv_Ovf_U,
-			OpCodes.Conv_Ovf_U1,
-			OpCodes.Conv_Ovf_U1_Un,
-			OpCodes.Conv_Ovf_U2,
-			OpCodes.Conv_Ovf_U2_Un,
-			OpCodes.Conv_Ovf_U4,
-			OpCodes.Conv_Ovf_U4_Un,
-			OpCodes.Conv_Ovf_U8,
-			OpCodes.Conv_Ovf_U8_Un,
-			OpCodes.Conv_Ovf_U_Un,
-			OpCodes.Conv_R4,
-			OpCodes.Conv_R8,
-			OpCodes.Conv_R_Un,
-			OpCodes.Conv_U,
-			OpCodes.Conv_U1,
-			OpCodes.Conv_U2,
-			OpCodes.Conv_U4,
-			OpCodes.Conv_U8,
-			OpCodes.Box,
-			OpCodes.Unbox,
-			OpCodes.Unbox_Any
-		};
+	public static readonly HashSet<OpCode> ConvertOpCodes =
+	[
+		OpCodes.Conv_I, OpCodes.Conv_I1, OpCodes.Conv_I2, OpCodes.Conv_I4, OpCodes.Conv_I8, OpCodes.Conv_Ovf_I,
+		OpCodes.Conv_Ovf_I1, OpCodes.Conv_Ovf_I1_Un, OpCodes.Conv_Ovf_I2, OpCodes.Conv_Ovf_I2_Un,
+		OpCodes.Conv_Ovf_I4, OpCodes.Conv_Ovf_I4_Un, OpCodes.Conv_Ovf_I8, OpCodes.Conv_Ovf_I8_Un,
+		OpCodes.Conv_Ovf_I_Un, OpCodes.Conv_Ovf_U, OpCodes.Conv_Ovf_U1, OpCodes.Conv_Ovf_U1_Un, OpCodes.Conv_Ovf_U2,
+		OpCodes.Conv_Ovf_U2_Un, OpCodes.Conv_Ovf_U4, OpCodes.Conv_Ovf_U4_Un, OpCodes.Conv_Ovf_U8,
+		OpCodes.Conv_Ovf_U8_Un, OpCodes.Conv_Ovf_U_Un, OpCodes.Conv_R4, OpCodes.Conv_R8, OpCodes.Conv_R_Un,
+		OpCodes.Conv_U, OpCodes.Conv_U1, OpCodes.Conv_U2, OpCodes.Conv_U4, OpCodes.Conv_U8, OpCodes.Box,
+		OpCodes.Unbox, OpCodes.Unbox_Any
+	];
 
 	public static bool LoadsArgument(this OpCode opcode) => LoadArgumentOpCodes.Contains(opcode);
 
-	public static readonly HashSet<OpCode> LoadArgumentOpCodes
-		= new()
-		{
-			OpCodes.Ldarg,
-			OpCodes.Ldarga,
-			OpCodes.Ldarga_S,
-			OpCodes.Ldarg_0,
-			OpCodes.Ldarg_1,
-			OpCodes.Ldarg_2,
-			OpCodes.Ldarg_3,
-			OpCodes.Ldarg_S
-		};
+	public static readonly HashSet<OpCode> LoadArgumentOpCodes =
+	[
+		OpCodes.Ldarg, OpCodes.Ldarga, OpCodes.Ldarga_S, OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2,
+		OpCodes.Ldarg_3, OpCodes.Ldarg_S
+	];
 
 	public static OpCode ToStoreArgument(this OpCode opcode)
 		=> opcode.StoresArgument() ? opcode
@@ -2766,7 +2671,8 @@ public static class FishTranspiler
 
 	public static object? GetOperandFromIndex(int index) => index > 3 ? index : null;
 
-	public static object? GetOperandOfConstant(int integer) => integer is < 9 and > -2 ? null : integer;
+	public static object? GetOperandOfConstant([SuppressMessage("Naming", "CA1720")] int integer)
+		=> integer is < 9 and > -2 ? null : integer;
 
 	public static object? GetOperandFromBuilder(LocalBuilder builder)
 	{

@@ -51,7 +51,7 @@ internal static class Convert
 			try
 			{
 				var dm = new DynamicMethod($"ObjectConverter_{from}_{to}", to,
-					new[] { typeof(object), typeof(IFormatProvider) }, typeof(FromObjectTo<TTo>), true);
+					[typeof(object), typeof(IFormatProvider)], typeof(FromObjectTo<TTo>), true);
 				var il = dm.GetILGenerator();
 
 				il.Emit(FishTranspiler.This);
@@ -59,7 +59,7 @@ internal static class Convert
 				if (from.IsValueType)
 				{
 					il.Emit(FishTranspiler.Call(typeof(FromObjectTo<TTo>), nameof(UnboxSafely),
-						generics: new[] { from }));
+						generics: [from]));
 				}
 
 				il.Emit(FishTranspiler.Argument(1));
@@ -72,8 +72,9 @@ internal static class Convert
 			}
 			catch (Exception ex)
 			{
-				throw new($"Failed to compile object converter from {from.FullDescription()} to {
-					to.FullDescription()}\n{ex}");
+				return ThrowHelper.ThrowInvalidOperationException<Func<object, IFormatProvider, TTo>>(
+					$"Failed to compile object converter from {from.FullDescription()} to {
+						to.FullDescription()}\n{ex}");
 			}
 		}
 
@@ -83,7 +84,7 @@ internal static class Convert
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		[SecuritySafeCritical]
 		private static ref T UnboxSafely<T>(object obj) where T : struct
-			=> ref Unsafe.Unbox<T>(obj is T ? obj : default);
+			=> ref Unsafe.Unbox<T>(obj is T ? obj : default(T));
 
 		private record struct FuncWrapper
 		{
@@ -163,7 +164,7 @@ internal static class Convert
 	private static MethodInfo GenerateWrapperMethod(Type from, Type to, MethodBase method)
 	{
 		var dm = new DynamicMethod($"Wrapper_op_{from.Name}_{to.Name}", to,
-			new[] { from.IsValueType ? from.MakeByRefType() : from, typeof(IFormatProvider) }, from, true);
+			[from.IsValueType ? from.MakeByRefType() : from, typeof(IFormatProvider)], from, true);
 		var il = dm.GetILGenerator();
 
 		il.Emit(FishTranspiler.Argument(0));

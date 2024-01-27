@@ -11,15 +11,15 @@ using System.Security;
 
 namespace FisheryLib.FunctionPointers;
 
-public abstract class MethodFactory
+public abstract class MethodFactory(MethodInfo[] methods, string namePrefix, bool byRef)
 {
-	protected readonly MethodInfo[] _methods;
+	protected readonly MethodInfo[] _methods = methods;
 
 	protected readonly ConcurrentDictionary<Type, MethodInfo> _methodsByType = new();
 
-	protected readonly string _namePrefix;
+	protected readonly string _namePrefix = namePrefix;
 
-	protected readonly bool _byRef;
+	protected readonly bool _byRef = byRef;
 
 	public MethodInfo GetGeneric(string name, params Type[] typeArguments)
 		=> GetNamed(name).MakeGenericMethod(typeArguments);
@@ -64,14 +64,8 @@ public abstract class MethodFactory
 		=> type.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
 			.Where(predicate).ToArray();
 
-	protected MethodFactory(MethodInfo[] methods, string namePrefix, bool byRef)
-	{
-		_byRef = byRef;
-		_methods = methods;
-		_namePrefix = namePrefix;
-	}
-
-	public new class Equals : MethodFactory
+	public new class Equals(Type type, string dynamicMethodNamePrefix, bool byRef)
+		: MethodFactory(GetMethodInfoArraySafely(type), dynamicMethodNamePrefix, byRef)
 	{
 		protected override MethodInfo GetOrMakeMethodForType(Type type)
 			=> GetSpecializedMethod(type)
@@ -160,7 +154,7 @@ public abstract class MethodFactory
 			try
 			{
 				var dm = new DynamicMethod($"{_namePrefix}{type.Name}", typeof(bool),
-					_byRef ? new[] { type.MakeByRefType(), type.MakeByRefType() } : new[] { type, type }, type, true);
+					_byRef ? [type.MakeByRefType(), type.MakeByRefType()] : [type, type], type, true);
 				var il = dm.GetILGenerator();
 
 				var fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
@@ -232,16 +226,12 @@ public abstract class MethodFactory
 				throw;
 			}
 		}
-		
-		public Equals(Type type, string dynamicMethodNamePrefix, bool byRef)
-			: base(GetMethodInfoArraySafely(type), dynamicMethodNamePrefix, byRef)
-		{
-		}
 
 		private delegate TResult ByRefFunc<T1, T2, out TResult>(ref T1 arg1, ref T2 arg2);
 	}
 	
-	public class HashCode : MethodFactory
+	public class HashCode(Type type, string dynamicMethodNamePrefix, bool byRef)
+		: MethodFactory(GetMethodInfoArraySafely(type), dynamicMethodNamePrefix, byRef)
 	{
 		protected override MethodInfo GetOrMakeMethodForType(Type type)
 			=> GetSpecializedMethod(type)
@@ -325,7 +315,7 @@ public abstract class MethodFactory
 			try
 			{
 				var dm = new DynamicMethod($"{_namePrefix}{type.Name}", typeof(int),
-					_byRef ? new[] { type.MakeByRefType() } : new[] { type }, type, true);
+					_byRef ? [type.MakeByRefType()] : [type], type, true);
 				var il = dm.GetILGenerator();
 
 				var fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
@@ -380,11 +370,6 @@ public abstract class MethodFactory
 				Log.Error($"Exception while preparing method info array for type {type}:\n{e}");
 				throw;
 			}
-		}
-
-		public HashCode(Type type, string dynamicMethodNamePrefix, bool byRef)
-			: base(GetMethodInfoArraySafely(type), dynamicMethodNamePrefix, byRef)
-		{
 		}
 
 		private delegate int ByRefHashCodeGetter<T>(ref T arg);

@@ -58,6 +58,8 @@ public static class ReflectionExtensions
 	private static T? TryGetNamed<T>(this IList<T> memberInfos, string name, Func<T, string> nameGetter)
 		where T : class
 	{
+		Guard.IsNotNull(memberInfos);
+		
 		for (var i = 0; i < memberInfos.Count; i++)
 		{
 			if (nameGetter(memberInfos[i]) == name)
@@ -69,6 +71,8 @@ public static class ReflectionExtensions
 
 	public static TypeReference[] GetTypeReferences(this Type[] types, ModuleDefinition module)
 	{
+		Guard.IsNotNull(types);
+		
 		var result = new TypeReference[types.Length];
 		for (var i = types.Length; i-- > 0;)
 			result[i] = module.ImportReference(types[i]);
@@ -77,8 +81,14 @@ public static class ReflectionExtensions
 	}
 	
 	public static bool IsGeneric(this TypeReference type)
-		=> type.ContainsGenericParameter || type.HasGenericParameters || type.IsGenericInstance;
+	{
+		Guard.IsNotNull(type);
+		return type.ContainsGenericParameter || type.HasGenericParameters || type.IsGenericInstance;
+	}
 
 	public static bool IsGeneric(this Type type)
-		=> type.ContainsGenericParameters || type.IsGenericType || type.IsConstructedGenericType;
+	{
+		Guard.IsNotNull(type);
+		return type.ContainsGenericParameters || type.IsGenericType || type.IsConstructedGenericType;
+	}
 }

@@ -58,9 +58,9 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		get => _count;
 	}
 
-	public object SyncRoot => throw new NotImplementedException();
+	object ICollection.SyncRoot => this;
 
-	public bool IsSynchronized => throw new NotImplementedException();
+	bool ICollection.IsSynchronized => false;
 
 	public bool IsReadOnly => false;
 
@@ -96,7 +96,13 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		get => Contains(key);
 
 		[CollectionAccess(CollectionAccessType.UpdatedContent)]
-		set => InsertEntry(key, value);
+		set
+		{
+			if (value)
+				InsertEntry(key, ReplaceBehaviour.Fail);
+			else
+				Remove(key);
+		}
 	}
 
 	public FishSet() : this(0)
@@ -121,7 +127,7 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 	public FishSet(IEnumerable<T> entries) : this(0)
 	{
 		foreach (var entry in entries)
-			InsertEntry(entry, false);
+			InsertEntry(entry, ReplaceBehaviour.Throw);
 	}
 
 	private int GetTailIndex(int entryIndex) => GetIndexForTail(entryIndex, _tails[(uint)entryIndex]);
@@ -129,56 +135,6 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private int GetIndexForTail(int entryIndex, uint tail) => (entryIndex + GetJumpDistance(tail)) & _wrapAroundMask;
 
-	#region Junk
-
-	// private static long GetJumpDistanceLong(byte index)
-	// 	=> index switch
-	// 	{
-	// 		0 => 0, 1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5, 6 => 6, 7 => 7,
-	// 		8 => 8, 9 => 9, 10 => 10, 11 => 11, 12 => 12, 13 => 13, 14 => 14,
-	// 		15 => 15, 16 => 21, 17 => 28, 18 => 36, 19 => 45, 20 => 55, 21 => 66,
-	// 		22 => 78, 23 => 91, 24 => 105, 25 => 120, 26 => 136, 27 => 153,
-	// 		28 => 171, 29 => 190, 30 => 210, 31 => 231, 32 => 253, 33 => 276,
-	// 		34 => 300, 35 => 325, 36 => 351, 37 => 378, 38 => 406, 39 => 435,
-	// 		40 => 465, 41 => 496, 42 => 528, 43 => 561, 44 => 595, 45 => 630,
-	// 		46 => 666, 47 => 703, 48 => 741, 49 => 780, 50 => 820, 51 => 861,
-	// 		52 => 903, 53 => 946, 54 => 990, 55 => 1035, 56 => 1081, 57 => 1128,
-	// 		58 => 1176, 59 => 1225, 60 => 1275, 61 => 1326, 62 => 1378, 63 => 1431,
-	// 		64 => 1485, 65 => 1540, 66 => 1596, 67 => 1653, 68 => 1711, 69 => 1770,
-	// 		70 => 1830, 71 => 1891, 72 => 1953, 73 => 2016, 74 => 2080, 75 => 2145,
-	// 		76 => 2211, 77 => 2278, 78 => 2346, 79 => 2415, 80 => 2485, 81 => 2556,
-	// 		82 => 3741, 83 => 8385, 84 => 18915, 85 => 42486, 86 => 95703, 87 => 215496,
-	// 		88 => 485605, 89 => 1091503, 90 => 2456436, 91 => 5529475, 92 => 12437578,
-	// 		93 => 27986421, 94 => 62972253, 95 => 141700195, 96 => 318819126, 97 => 717314626,
-	// 		98 => 1614000520, 99 => 3631437253, 100 => 8170829695, 101 => 18384318876, 102 => 41364501751,
-	// 		103 => 93070021080, 104 => 209407709220, 105 => 471167588430, 106 => 1060127437995, 107 => 2385287281530,
-	// 		108 => 5366895564381, 109 => 12075513791265, 110 => 27169907873235, 111 => 61132301007778,
-	// 		112 => 137547673121001, 113 => 309482258302503, 114 => 696335090510256, 115 => 1566753939653640,
-	// 		116 => 3525196427195653, 117 => 7931691866727775, 118 => 17846306747368716,
-	// 		119 => 40154190394120111, 120 => 90346928493040500, 121 => 203280588949935750,
-	// 		122 => 457381324898247375, 123 => 1029107980662394500, 124 => 2315492957028380766,
-	// 		125 => 5209859150892887590, > 125 => throw new()
-	// 	};
-	
-	// private static int GetJumpDistance(byte index)
-	// 	=> index switch
-	// 	{
-	// 		0 => 0, 1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5, 6 => 6, 7 => 7, 8 => 8, 9 => 9, 10 => 10, 11 => 11,
-	// 		12 => 12, 13 => 13, 14 => 14, 15 => 15, 16 => 21, 17 => 28, 18 => 36, 19 => 45, 20 => 55, 21 => 66,
-	// 		22 => 78, 23 => 91, 24 => 105, 25 => 120, 26 => 136, 27 => 153, 28 => 171, 29 => 190, 30 => 210, 31 => 231,
-	// 		32 => 253, 33 => 276, 34 => 300, 35 => 325, 36 => 351, 37 => 378, 38 => 406, 39 => 435, 40 => 465,
-	// 		41 => 496, 42 => 528, 43 => 561, 44 => 595, 45 => 630, 46 => 666, 47 => 703, 48 => 741, 49 => 780,
-	// 		50 => 820, 51 => 861, 52 => 903, 53 => 946, 54 => 990, 55 => 1035, 56 => 1081, 57 => 1128, 58 => 1176,
-	// 		59 => 1225, 60 => 1275, 61 => 1326, 62 => 1378, 63 => 1431, 64 => 1485, 65 => 1540, 66 => 1596, 67 => 1653,
-	// 		68 => 1711, 69 => 1770, 70 => 1830, 71 => 1891, 72 => 1953, 73 => 2016, 74 => 2080, 75 => 2145, 76 => 2211,
-	// 		77 => 2278, 78 => 2346, 79 => 2415, 80 => 2485, 81 => 2556, 82 => 3741, 83 => 8385, 84 => 18915,
-	// 		85 => 42486, 86 => 95703, 87 => 215496, 88 => 485605, 89 => 1091503, 90 => 2456436, 91 => 5529475,
-	// 		92 => 12437578, 93 => 27986421, 94 => 62972253, 95 => 141700195, 96 => 318819126, 97 => 717314626,
-	// 		98 => 1614000520, 255 => int.MaxValue, > 98 => ThrowForInvalidIndex(index)
-	// 	};
-
-	#endregion
-	
 	private static int GetJumpDistance(uint index)
 		=> index switch
 		{
@@ -190,9 +146,6 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 	[DoesNotReturn]
 	private static int MultiplyWithPhi(uint index)
 		=> throw new NotImplementedException(); // (int)(uint)Math.Round(index * FishMath.PHI);
-
-	// private static int ThrowForInvalidIndex(byte index)
-	// 	=> throw new($"Jump distance index for FishTable too large. Should be < 99, got {index} instead.");
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private bool IsTail(int bucketIndex)
@@ -210,6 +163,12 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		_buckets[bucketIndex] = entry;
 		_tails.SetSolo(bucketIndex);
 	}
+	
+	private void SetBucketEmpty(int index)
+	{
+		_buckets[index] = default;
+		_tails.SetEmpty(index);
+	}
 
 	private void SetEntryAsTail(int bucketIndex, T entry, int parentIndex, uint offset)
 	{
@@ -220,9 +179,9 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 	private void SetParentTail(int entryIndex, uint newTail)
 		=> _tails[(uint)GetParentBucketIndex(entryIndex)] = newTail;
 
-	private bool InsertEntry(T entry, bool allowReplace = true, bool shifting = false)
+	private bool InsertEntry(T entry, ReplaceBehaviour replaceBehaviour, bool shifting = false)
 	{
-		var addedNewEntry = InsertEntryInternal(entry, allowReplace);
+		var addedNewEntry = InsertEntryInternal(entry, replaceBehaviour);
 
 		if (shifting)
 			return addedNewEntry;
@@ -247,7 +206,7 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 	/// Returns true when adding a new entry, false for replacing an existing entry. AllowReplace: false causes throwing
 	/// instead. Does not adjust Count, Version or invoke EntryAdded.
 	/// </summary>
-	private bool InsertEntryInternal(T entry, bool allowReplace = true)
+	private bool InsertEntryInternal(T entry, ReplaceBehaviour replaceBehaviour)
 	{
 	StartOfMethod:
 		var bucketIndex = GetBucketIndex(entry);
@@ -259,7 +218,7 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 			return true;
 		}
 
-		if (TryReplaceValueOfMatchingKey(entry, allowReplace, ref bucket!))
+		if (TryReplaceValueOfMatchingKey(entry, replaceBehaviour, ref bucket!))
 			return false;
 
 		if (CheckResize())
@@ -268,51 +227,28 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		if (IsTail(bucket, bucketIndex))
 		{
 			var previousEntry = bucket;
-			var hasTail = !_tails.IsSolo(bucketIndex);
-			var tailingEntries = hasTail ? new T[GetTailCount(bucketIndex)] : null;
-
-			if (hasTail)
-			{
-				var i = 0;
-				var tailIndex = GetTailIndex(bucketIndex);
-
-				while (true)
-				{
-					ref var tailingBucket = ref _buckets[tailIndex];
-					tailingEntries![i++] = tailingBucket!;
-					tailingBucket = default;
-
-					if (!_tails.IsSoloOrEmpty(tailIndex))
-					{
-						var nextTailIndex = GetTailIndex(tailIndex);
-						_tails.SetEmpty(tailIndex);
-						tailIndex = nextTailIndex;
-					}
-					else
-					{
-						_tails.SetEmpty(tailIndex);
-						break;
-					}
-				}
-			}
+			var tailingEntries = TryGetAndClearTailingEntries(bucketIndex);
 			
 			SetParentTail(bucketIndex, Tails.SOLO);
 			SetEntryWithoutTail(bucketIndex, entry);
-
-			InsertEntry(previousEntry, shifting: true);
-			if (hasTail)
-			{
-				for (var i = 0; i < tailingEntries!.Length; i++)
-					InsertEntry(tailingEntries[i], shifting: true);
-			}
+			InsertEntry(previousEntry, ReplaceBehaviour.Throw, true);
+			
+			if (tailingEntries != null)
+				InsertEntries(tailingEntries, ReplaceBehaviour.Throw, true);
 
 			return true;
 		}
 		else
 		{
-			return !TryFindTailIndexAndReplace(entry, ref bucketIndex, allowReplace)
+			return !TryFindTailIndexAndReplace(entry, ref bucketIndex, replaceBehaviour)
 				&& InsertAsTail(entry, bucketIndex);
 		}
+	}
+
+	private void InsertEntries(T[] tailingEntries, ReplaceBehaviour replaceBehaviour, bool shifting = false)
+	{
+		for (var i = 0; i < tailingEntries.Length; i++)
+			InsertEntry(tailingEntries[i], replaceBehaviour, shifting);
 	}
 
 	private int GetTailCount(int index)
@@ -331,30 +267,36 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 	private bool IsBucketEmpty(int bucketIndex) => IsBucketEmpty(bucketIndex, _tails, _buckets);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private bool IsBucketEmpty(int bucketIndex, Tails tails, T?[] buckets) => tails.IsEmpty(bucketIndex);
+	private static bool IsBucketEmpty(int bucketIndex, Tails tails, T?[] buckets) => tails.IsEmpty(bucketIndex);
 
-	private bool TryFindTailIndexAndReplace(T entry, ref int bucketIndex, bool allowReplace)
+	private bool TryFindTailIndexAndReplace(T entry, ref int bucketIndex, ReplaceBehaviour replaceBehaviour)
 	{
 		while (true)
 		{
 			if (!TryContinueWithTail(ref bucketIndex))
 				return false;
 			
-			if (TryReplaceValueOfMatchingKey(entry, allowReplace, ref _buckets[bucketIndex]!))
+			if (TryReplaceValueOfMatchingKey(entry, replaceBehaviour, ref _buckets[bucketIndex]!))
 				return true;
 		}
 	}
 
-	private unsafe bool TryReplaceValueOfMatchingKey(T entry, bool allowReplace, ref T bucket)
+	private unsafe bool TryReplaceValueOfMatchingKey(T entry, ReplaceBehaviour replaceBehaviour, ref T bucket)
 	{
 		if (!_equalityComparer(bucket, entry))
 			return false;
 
-		if (!allowReplace)
-			ThrowHelper.ThrowAddingDuplicateWithKeyArgumentException(entry);
-
-		bucket = entry;
-		return true;
+		switch (replaceBehaviour)
+		{
+			case ReplaceBehaviour.Throw:
+				return ThrowHelper.ThrowAddingDuplicateWithKeyArgumentException(entry);
+			case ReplaceBehaviour.Replace:
+				bucket = entry;
+				goto default;
+			case ReplaceBehaviour.Fail:
+			default:
+				return true;
+		}
 	}
 
 	private bool InsertAsTail(T entry, int bucketIndex)
@@ -382,54 +324,53 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 				WarnForPossiblyExcessiveResizing(entry);
 
 			Resize();
-			InsertEntry(entry, false, true);
+			InsertEntry(entry, ReplaceBehaviour.Throw, true);
 			return true;
 		}
 		
 		var previousEntry = _buckets[bucketIndex];
-		var hasTail = !_tails.IsSolo(bucketIndex);
-		
-		var tailingEntries = hasTail ? new T?[GetTailCount(bucketIndex)] : null;
-
-		if (hasTail)
-		{
-			var k = 0;
-			var tailIndex = GetTailIndex(bucketIndex);
-
-			while (true)
-			{
-				ref var tailingBucket = ref _buckets[tailIndex];
-				tailingEntries![k] = tailingBucket;
-
-				k++;
-				tailingBucket = default;
-
-				if (!_tails.IsSoloOrEmpty(tailIndex))
-				{
-					var nextTailIndex = GetTailIndex(tailIndex);
-					_tails.SetEmpty(tailIndex);
-					tailIndex = nextTailIndex;
-				}
-				else
-				{
-					_tails.SetEmpty(tailIndex);
-					break;
-				}
-			}
-		}
+		var tailingEntries = TryGetAndClearTailingEntries(bucketIndex);
 
 		SetParentTail(bucketIndex, Tails.SOLO);
 		SetEntryAsTail(bucketIndex, entry, parentIndex, offset);
 
-		InsertEntry(previousEntry!, shifting: true);
+		InsertEntry(previousEntry!, ReplaceBehaviour.Throw, true);
 		
-		if (hasTail)
-		{
-			for (var k = 0; k < tailingEntries!.Length; k++)
-				InsertEntry(tailingEntries[k]!, shifting: true);
-		}
+		if (tailingEntries != null)
+			InsertEntries(tailingEntries, ReplaceBehaviour.Throw, true);
 
 		return true;
+	}
+
+	private T[]? TryGetAndClearTailingEntries(int bucketIndex)
+	{
+		if (!HasTail(bucketIndex))
+			return null;
+		
+		var tailingEntries = new T[GetTailCount(bucketIndex)];
+		var i = 0;
+		var tailIndex = GetTailIndex(bucketIndex);
+
+		while (true)
+		{
+			ref var tailingBucket = ref _buckets[tailIndex];
+			tailingEntries[i++] = tailingBucket!;
+			tailingBucket = default;
+
+			if (HasTail(tailIndex))
+			{
+				var nextTailIndex = GetTailIndex(tailIndex);
+				_tails.SetEmpty(tailIndex);
+				tailIndex = nextTailIndex;
+			}
+			else
+			{
+				_tails.SetEmpty(tailIndex);
+				break;
+			}
+		}
+
+		return tailingEntries;
 	}
 
 	[MethodImpl(MethodImplOptions.NoInlining)]
@@ -474,7 +415,7 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		for (var i = 0; i < oldBuckets.Length; i++)
 		{
 			if (!IsBucketEmpty(i, oldTails, oldBuckets))
-				InsertEntry(oldBuckets[i]!, false, true);
+				InsertEntry(oldBuckets[i]!, ReplaceBehaviour.Throw, true);
 		}
 	}
 
@@ -545,7 +486,7 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 	public bool Add(T key)
 	{
 		Guard.IsNotNull(key);
-		return InsertEntry(key, false);
+		return InsertEntry(key, ReplaceBehaviour.Fail);
 	}
 
 	public void UnionWith(IEnumerable<T> other) => throw new NotImplementedException();
@@ -578,36 +519,23 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		return true;
 	}
 
-	private void EmplaceWithTails(int entryIndex)
+	private void EmplaceWithTailsBackward(int entryIndex)
 	{
-		ref var bucket = ref _buckets[entryIndex];
-		var entry = bucket;
-
-		Span<int> tailIndices = stackalloc int[GetTailCount(entryIndex)];
-
-		if (HasTail(entryIndex))
+		if (IsBucketEmpty(entryIndex))
+			Utility.Diagnostics.ThrowHelper.ThrowInvalidOperationException("Tried to emplace entry bucket");
+		
+		while (true)
 		{
-			tailIndices[0] = GetTailIndex(entryIndex);
-			for (var i = 1; i < tailIndices.Length; i++)
-				tailIndices[i] = GetTailIndex(tailIndices[i - 1]);
-		}
-		
-		if (IsTail(entry!, entryIndex))
-			SetParentTail(entryIndex, Tails.SOLO);
-		
-		bucket = default;
-		_tails.SetEmpty(entryIndex);
-		InsertEntry(entry!, shifting: true);
-		
-		for (var i = 1; i < tailIndices.Length; i++)
-		{
-			var tailIndex = tailIndices[i];
-			ref var tailBucket = ref _buckets[tailIndex];
-			var tailEntry = tailBucket;
+			var tailIndex = HasTail(entryIndex) ? GetTailIndex(entryIndex) : -1;
+			var entry = _buckets[entryIndex];
 
-			tailBucket = default;
-			_tails.SetEmpty(tailIndex);
-			InsertEntry(tailEntry!, shifting: true);
+			SetBucketEmpty(entryIndex);
+			InsertEntry(entry!, ReplaceBehaviour.Throw, true);
+
+			if (tailIndex < 0)
+				return;
+
+			entryIndex = tailIndex;
 		}
 	}
 	
@@ -621,20 +549,15 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 				
 			if (_equalityComparer(key, entry))
 			{
-				var tailIndex = -1;
+				var tailIndex = HasTail(bucketIndex) ? GetTailIndex(bucketIndex) : -1;
+				
 				if (IsTail(entry!, bucketIndex))
-				{
-					if (HasTail(bucketIndex))
-						tailIndex = GetTailIndex(bucketIndex);
-					else
-						SetParentTail(bucketIndex, Tails.SOLO);
-				}
+					SetParentTail(bucketIndex, Tails.SOLO);
 
-				entry = default;
-				_tails.SetEmpty(bucketIndex);
+				SetBucketEmpty(bucketIndex);
 
 				if (tailIndex != -1)
-					EmplaceWithTails(tailIndex);
+					EmplaceWithTailsBackward(tailIndex);
 
 				return true;
 			}
@@ -714,17 +637,27 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 
 	#endregion
 
+#region enums
+	
+	private enum ReplaceBehaviour
+	{
+		Replace,
+		Throw,
+		Fail
+	}
+	
+#endregion
+
+
 	#region Structs
 
-	internal struct Tails
+	internal struct Tails(uint length)
 	{
 		public const uint
 			EMPTY = 0u,
 			SOLO = 1u;
 		
-		private NibbleArray _values;
-
-		public Tails(uint length) => _values = new(length);
+		private NibbleArray _values = new(length);
 
 		public uint this[uint index]
 		{
@@ -837,10 +770,11 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		}
 
 		[DoesNotReturn]
-		internal static void ThrowAddingDuplicateWithKeyArgumentException(T key)
+		internal static bool ThrowAddingDuplicateWithKeyArgumentException(T key)
 		{
 			Guard.IsNotNull(key);
 			ThrowAddingDuplicateWithKeyArgumentException((object)key);
+			return true;
 		}
 		
 		[DoesNotReturn]
