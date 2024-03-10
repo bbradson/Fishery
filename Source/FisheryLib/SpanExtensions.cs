@@ -40,11 +40,11 @@ public static class SpanExtensions
 		=> ref Unsafe.Add(ref span.DangerousGetPinnableReference(), i);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void Sort<T>(this Span<T> span, IComparer<T>? comparer)
+	public static void Sort<T>(this Span<T> span, IComparer<T>? comparer = null)
 		=> ArraySortHelper<T>.Default.Sort(span, comparer);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void Sort<TKey, TValue>(this Span<TValue> values, Span<TKey> keys, IComparer<TKey>? comparer)
+	public static void Sort<TKey, TValue>(this Span<TValue> values, Span<TKey> keys, IComparer<TKey>? comparer = null)
 		=> ArraySortHelper<TKey, TValue>.Default.Sort(keys, values, comparer);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

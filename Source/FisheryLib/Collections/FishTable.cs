@@ -172,9 +172,9 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 
 	IEnumerable<TValue> IReadOnlyDictionary<TKey, TValue>.Values => Values;
 
-	object? IDictionary.this[object key]
+	object IDictionary.this[object key]
 	{
-		get => this[AssertKeyType(key)];
+		get => this[AssertKeyType(key)]!;
 		set => this[AssertKeyType(key)] = AssertValueType(value);
 	}
 
@@ -198,7 +198,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		return default!;
 	}
 
-	public unsafe TValue? this[TKey key]
+	public unsafe TValue this[TKey key]
 	{
 		[CollectionAccess(CollectionAccessType.Read)]
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -211,7 +211,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 				ref var bucket = ref _buckets[bucketIndex];
 
 				if (_keyEqualityComparer(key, bucket.Key))
-					return bucket.Value;
+					return bucket.Value!;
 
 				ContinueWithTailOrThrow(ref bucketIndex, key);
 			}
@@ -352,14 +352,14 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		if (IsTail(ref bucket, bucketIndex))
 		{
 			var previousEntry = bucket;
-			var tailingEntries = TryGetAndClearTailingEntries(bucketIndex);
+			using var tailingEntries = TryGetAndClearTailingEntries(bucketIndex);
 			
 			SetParentTail(bucketIndex, Tails.SOLO);
 			SetEntryWithoutTail(bucketIndex, entry);
 			InsertEntry(previousEntry, ReplaceBehaviour.Throw, true);
 			
-			if (tailingEntries != null)
-				InsertEntries(tailingEntries, ReplaceBehaviour.Throw, true);
+			if (tailingEntries != default)
+				InsertEntries(tailingEntries.List, ReplaceBehaviour.Throw, true);
 
 			return true;
 		}
@@ -370,9 +370,9 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		}
 	}
 
-	private void InsertEntries(Entry[] tailingEntries, ReplaceBehaviour replaceBehaviour, bool shifting = false)
+	private void InsertEntries(List<Entry> tailingEntries, ReplaceBehaviour replaceBehaviour, bool shifting = false)
 	{
-		for (var i = 0; i < tailingEntries.Length; i++)
+		for (var i = 0; i < tailingEntries.Count; i++)
 			InsertEntry(tailingEntries[i], replaceBehaviour, shifting);
 	}
 
@@ -473,31 +473,31 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		}
 		
 		var previousEntry = _buckets[bucketIndex];
-		var tailingEntries = TryGetAndClearTailingEntries(bucketIndex);
+		using var tailingEntries = TryGetAndClearTailingEntries(bucketIndex);
 
 		SetParentTail(bucketIndex, Tails.SOLO);
 		SetEntryAsTail(bucketIndex, entry, parentIndex, offset);
 		InsertEntry(previousEntry, ReplaceBehaviour.Throw, true);
 		
-		if (tailingEntries != null)
-			InsertEntries(tailingEntries, ReplaceBehaviour.Throw, true);
+		if (tailingEntries != default)
+			InsertEntries(tailingEntries.List, ReplaceBehaviour.Throw, true);
 
 		return true;
 	}
 
-	private Entry[]? TryGetAndClearTailingEntries(int bucketIndex)
+	private PooledIList<List<Entry>> TryGetAndClearTailingEntries(int bucketIndex)
 	{
 		if (!HasTail(bucketIndex))
-			return null;
+			return default;
 
-		var tailingEntries = new Entry[GetTailCount(bucketIndex)];
-		var i = 0;
+		var tailingEntries = new PooledIList<List<Entry>>();
+		var tailingEntriesList = tailingEntries.List;
 		var tailIndex = GetTailIndex(bucketIndex);
 
 		while (true)
 		{
 			ref var tailingBucket = ref _buckets[tailIndex];
-			tailingEntries[i++] = tailingBucket;
+			tailingEntriesList.Add(tailingBucket);
 			tailingBucket = default;
 
 			if (HasTail(tailIndex))
@@ -639,7 +639,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 	}
 
 	[CollectionAccess(CollectionAccessType.Read | CollectionAccessType.UpdatedContent)]
-	public unsafe bool TryGetOrAddValue(TKey key, [MaybeNullWhen(false)] out TValue value)
+	public unsafe bool TryGetOrAddValue(TKey key, out TValue value)
 	{
 		var result = true;
 

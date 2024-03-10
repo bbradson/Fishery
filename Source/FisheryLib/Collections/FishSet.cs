@@ -12,6 +12,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using FisheryLib.FunctionPointers;
+using FisheryLib.Pools;
 using FisheryLib.Utility;
 using JetBrains.Annotations;
 
@@ -227,14 +228,14 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		if (IsTail(bucket, bucketIndex))
 		{
 			var previousEntry = bucket;
-			var tailingEntries = TryGetAndClearTailingEntries(bucketIndex);
+			using var tailingEntries = TryGetAndClearTailingEntries(bucketIndex);
 			
 			SetParentTail(bucketIndex, Tails.SOLO);
 			SetEntryWithoutTail(bucketIndex, entry);
 			InsertEntry(previousEntry, ReplaceBehaviour.Throw, true);
 			
-			if (tailingEntries != null)
-				InsertEntries(tailingEntries, ReplaceBehaviour.Throw, true);
+			if (tailingEntries != default)
+				InsertEntries(tailingEntries.List, ReplaceBehaviour.Throw, true);
 
 			return true;
 		}
@@ -245,9 +246,9 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		}
 	}
 
-	private void InsertEntries(T[] tailingEntries, ReplaceBehaviour replaceBehaviour, bool shifting = false)
+	private void InsertEntries(List<T> tailingEntries, ReplaceBehaviour replaceBehaviour, bool shifting = false)
 	{
-		for (var i = 0; i < tailingEntries.Length; i++)
+		for (var i = 0; i < tailingEntries.Count; i++)
 			InsertEntry(tailingEntries[i], replaceBehaviour, shifting);
 	}
 
@@ -329,32 +330,32 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		}
 		
 		var previousEntry = _buckets[bucketIndex];
-		var tailingEntries = TryGetAndClearTailingEntries(bucketIndex);
+		using var tailingEntries = TryGetAndClearTailingEntries(bucketIndex);
 
 		SetParentTail(bucketIndex, Tails.SOLO);
 		SetEntryAsTail(bucketIndex, entry, parentIndex, offset);
 
 		InsertEntry(previousEntry!, ReplaceBehaviour.Throw, true);
 		
-		if (tailingEntries != null)
-			InsertEntries(tailingEntries, ReplaceBehaviour.Throw, true);
+		if (tailingEntries != default)
+			InsertEntries(tailingEntries.List, ReplaceBehaviour.Throw, true);
 
 		return true;
 	}
 
-	private T[]? TryGetAndClearTailingEntries(int bucketIndex)
+	private PooledIList<List<T>> TryGetAndClearTailingEntries(int bucketIndex)
 	{
 		if (!HasTail(bucketIndex))
-			return null;
-		
-		var tailingEntries = new T[GetTailCount(bucketIndex)];
-		var i = 0;
+			return default;
+
+		var tailingEntries = new PooledIList<List<T>>();
+		var tailingEntriesList = tailingEntries.List;
 		var tailIndex = GetTailIndex(bucketIndex);
 
 		while (true)
 		{
 			ref var tailingBucket = ref _buckets[tailIndex];
-			tailingEntries[i++] = tailingBucket!;
+			tailingEntriesList.Add(tailingBucket!);
 			tailingBucket = default;
 
 			if (HasTail(tailIndex))
