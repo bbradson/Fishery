@@ -4,8 +4,9 @@
 
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+#if V1_2
 using JetBrains.Annotations;
-using NotNullAttribute = System.Diagnostics.CodeAnalysis.NotNullAttribute;
+#endif
 
 namespace FisheryLib.Utility.Diagnostics;
 

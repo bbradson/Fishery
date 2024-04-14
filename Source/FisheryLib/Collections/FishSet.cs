@@ -7,6 +7,9 @@
 // which itself is based on
 // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
 
+#if V1_2
+extern alias nuget;
+#endif
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -14,7 +17,10 @@ using System.Runtime.InteropServices;
 using FisheryLib.FunctionPointers;
 using FisheryLib.Pools;
 using FisheryLib.Utility;
-using JetBrains.Annotations;
+#if V1_2
+using CollectionAccessType = nuget::JetBrains.Annotations.CollectionAccessType;
+using CollectionAccessAttribute = nuget::JetBrains.Annotations.CollectionAccessAttribute;
+#endif
 
 namespace FisheryLib.Collections;
 
@@ -42,6 +48,8 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 
 	private float _maxLoadFactor = 0.5f;
 
+	private T _defaultValue = Internal.KeyUtility<T>.Default;
+
 	public int Version
 	{
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -64,6 +72,22 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 	bool ICollection.IsSynchronized => false;
 
 	public bool IsReadOnly => false;
+
+	/// <summary>
+	/// Empty FishSets have their entries set to a default value, causing fishSet.Contains(DefaultValue) to return
+	/// true. This property can be used for a check against this default, similar to a null. Unless set to a different
+	/// default through the FishSet constructor, for most reference types, the returned value is a static invalid
+	/// reference. Reference types implementing IEquatable or overriding Equals have null as default instead. Primitives
+	/// have all their bytes set to sbyte.MaxValue. Structs have their contents set according to previous rules.
+	/// </summary>
+	public T DefaultValue => _defaultValue;
+
+	public unsafe uint SizeEstimate
+		=> GetType().ComputeManagedObjectSizeEstimate()
+			+ ((uint)sizeof(T) * (uint)_buckets.Length)
+			+ ((_tails.Length + 1u) >> 1);
+
+	public uint CollisionCount => (uint)GetTailingEntriesCount();
 
 	public event Action<T>?
 		EntryAdded,
@@ -112,6 +136,19 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 
 	public FishSet(int minimumCapacity) => Initialize(minimumCapacity);
 
+	/// <summary>
+	/// Initialize a new FishSet
+	/// </summary>
+	/// <param name="minimumCapacity">The minimum capacity of the backing array</param>
+	/// <param name="defaultValue">
+	/// The default value for empty entries. Contains() returns true for this value when empty
+	/// </param>
+	public FishSet(int minimumCapacity, T defaultValue)
+	{
+		_defaultValue = defaultValue;
+		Initialize(minimumCapacity);
+	}
+
 	[MemberNotNull(nameof(_buckets))]
 	[MemberNotNull(nameof(_tails))]
 	private void Initialize(int minimumCapacity = 0)
@@ -120,6 +157,7 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 			// Mathf.NextPowerOfTwo(minimumCapacity);
 		
 		_buckets = new T?[minimumCapacity];
+		Array.Fill(_buckets, _defaultValue);
 		_tails = new((uint)minimumCapacity);
 		_bucketBitShift = 32 - FishMath.TrailingZeroCount((uint)_buckets.Length);
 		_wrapAroundMask = _buckets.Length - 1;
@@ -167,7 +205,7 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 	
 	private void SetBucketEmpty(int index)
 	{
-		_buckets[index] = default;
+		_buckets[index] = _defaultValue;
 		_tails.SetEmpty(index);
 	}
 
@@ -356,7 +394,7 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		{
 			ref var tailingBucket = ref _buckets[tailIndex];
 			tailingEntriesList.Add(tailingBucket!);
-			tailingBucket = default;
+			tailingBucket = _defaultValue;
 
 			if (HasTail(tailIndex))
 			{
@@ -409,6 +447,7 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 
 		_tails = new((uint)_buckets.Length << 1);
 		_buckets = new T?[_buckets.Length << 1];
+		Array.Fill(_buckets, _defaultValue);
 
 		_bucketBitShift = 32 - FishMath.TrailingZeroCount((uint)_buckets.Length);
 		_wrapAroundMask = _buckets.Length - 1;
@@ -579,7 +618,7 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		if (_buckets is null)
 			Initialize();
 		
-		Array.Clear(_buckets, 0, _buckets.Length);
+		Array.Fill(_buckets, Internal.KeyUtility<T>.Default);
 		_tails.Reset();
 		
 		_count = 0;
@@ -659,6 +698,8 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 			SOLO = 1u;
 		
 		private NibbleArray _values = new(length);
+
+		public uint Length => _values.Length;
 
 		public uint this[uint index]
 		{

@@ -4,7 +4,6 @@
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
 using System.Runtime.CompilerServices;
-using JetBrains.Annotations;
 using UnityEngine;
 using Verse;
 
@@ -15,9 +14,19 @@ public static class GUIScope
 {
 	public readonly record struct WidgetGroup : IDisposable
 	{
-		public WidgetGroup(in Rect rect) => Widgets.BeginGroup(rect);
+		public WidgetGroup(in Rect rect)
+#if !V1_2
+			=> Widgets.BeginGroup(rect);
+#else
+			=> GUI.BeginGroup(rect);
+#endif
 
-		public void Dispose() => Widgets.EndGroup();
+		public void Dispose()
+#if !V1_2
+			=> Widgets.EndGroup();
+#else
+			=> GUI.EndGroup();
+#endif
 	}
 	
 	public readonly record struct ScrollView : IDisposable

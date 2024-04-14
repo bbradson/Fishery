@@ -5,7 +5,6 @@
 
 global using static FisheryLib.Aliases;
 using System.Runtime.CompilerServices;
-using JetBrains.Annotations;
 
 namespace FisheryLib;
 

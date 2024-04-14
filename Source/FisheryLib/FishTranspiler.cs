@@ -9,8 +9,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection.Emit;
 using System.Security;
-using JetBrains.Annotations;
 using Verse;
+
 // ReSharper disable PossibleMultipleEnumeration
 
 namespace FisheryLib;
@@ -163,13 +163,19 @@ public static class FishTranspiler
 				: null;
 
 		public Type? GetTypeIn(MethodBase method)
-			=> OpCode.LoadsArgument() ? method.GetParameters()[GetIndex()].ParameterType
+			=> OpCode.LoadsArgument()
+				? method.GetParameters()[GetIndex()].ParameterType
 				: OpCode.LoadsLocalVariable() || OpCode.StoresLocalVariable()
 					? method.GetLocalVariables()[GetIndex()].LocalType
-				: OpCode.LoadsField() || OpCode.StoresField() ? (Operand as FieldInfo)?.FieldType
-				: OpCode == OpCodes.Call || OpCode == OpCodes.Callvirt ? (Operand as MethodInfo)?.ReturnType
-				: OpCode.LoadsConstant() ? Operand?.GetType()
-				: null;
+					: OpCode.LoadsField() || OpCode.StoresField()
+						? (Operand as FieldInfo)?.FieldType
+						: OpCode == OpCodes.Call || OpCode == OpCodes.Callvirt
+							? (Operand as MethodInfo)?.ReturnType
+							: OpCode.LoadsConstant()
+								? Operand?.GetType()
+								: null;
+
+		private bool Calls() => (OpCode == OpCodes.Call) | (OpCode == OpCodes.Callvirt);
 
 		public override bool Equals(object? obj)
 			=> obj is CodeInstruction code
@@ -186,13 +192,13 @@ public static class FishTranspiler
 				: unchecked((((1009 * 9176) + OpCode.GetHashCode()) * 9176) + Operand.GetHashCode());
 
 		public static bool operator ==(Container lhs, Container rhs)
-			=> lhs.OpCode == rhs.OpCode
-				&& CompareOperands(lhs.Operand, rhs.Operand);
+			=> OpCodeEquals(lhs.OpCode, rhs.OpCode) && CompareOperands(lhs.Operand, rhs.Operand);
 
 		public static bool operator !=(Container lhs, Container rhs) => !(lhs == rhs);
 
-		public static bool operator ==(Container helper, CodeInstruction code)
-			=> helper.OpCode == code.opcode
+		public static bool operator ==(Container helper, CodeInstruction? code)
+			=> code != null
+				&& OpCodeEquals(helper.OpCode, code.opcode)
 				&& CompareOperands(helper.Operand, code.operand);
 
 		public static bool operator !=(Container helper, CodeInstruction code) => !(helper == code);
@@ -200,6 +206,11 @@ public static class FishTranspiler
 		public static bool operator ==(CodeInstruction code, Container helper) => helper == code;
 
 		public static bool operator !=(CodeInstruction code, Container helper) => !(helper == code);
+
+		private static bool OpCodeEquals(in OpCode lhs, in OpCode rhs)
+			=> lhs == rhs || (IsCallOpcode(lhs) && IsCallOpcode(rhs));
+
+		private static bool IsCallOpcode(in OpCode opCode) => opCode == OpCodes.Call || opCode == OpCodes.Callvirt;
 
 		[SuppressMessage("Usage", "CA2225")]
 		public static implicit operator CodeInstruction(Container helper) => helper.ToInstruction();
@@ -506,7 +517,7 @@ public static class FishTranspiler
 			? locals.First()
 			: ThrowHelper.ThrowInvalidOperationException<Container>(
 				$"No local variable found for predicate {predicate.Method.FullDescription()} and method {
-				method.FullDescription()}");
+					method.FullDescription()}");
 	}
 
 	/// <summary>
@@ -782,7 +793,7 @@ public static class FishTranspiler
 		=> ThrowHelper.ThrowArgumentException<Container>(
 			$"Tried using Enum {e.GetType().FullDescription()} with underlying Type {
 				Enum.GetUnderlyingType(e.GetType()).FullDescription()} (TypeCode: {
-				typeCode}) for FishTranspiler.Constant.");
+					typeCode}) for FishTranspiler.Constant.");
 
 	/// <summary>
 	/// Calls the method indicated by the passed method group.
@@ -828,8 +839,7 @@ public static class FishTranspiler
 		Guard.IsNotNullOrEmpty(type);
 		Guard.IsNotNullOrEmpty(name);
 
-		return Call(
-			Type.GetType($"{type}, {assembly}")
+		return Call(Type.GetType($"{type}, {assembly}")
 			?? ThrowHelper.ThrowArgumentException<Type>($"No type named {type} found in assembly {assembly}"), name,
 			parameters, generics, forceNoCallvirt);
 	}
@@ -851,11 +861,10 @@ public static class FishTranspiler
 		Guard.IsNotNull(type);
 		Guard.IsNotNullOrEmpty(name);
 
-		return Call(
-			AccessTools.Method(type, name, parameters, generics)
+		return Call(AccessTools.Method(type, name, parameters, generics)
 			?? ThrowHelper.ThrowArgumentException<MethodInfo>($"No method found with type {type}, name {
 				name}{(parameters != null ? $", parameters: {parameters.ToStringSafeEnumerable()}" : "")}{
-				(generics != null ? $", generics: {generics.ToStringSafeEnumerable()}" : "")}"),
+					(generics != null ? $", generics: {generics.ToStringSafeEnumerable()}" : "")}"),
 			forceNoCallvirt);
 	}
 
@@ -869,10 +878,9 @@ public static class FishTranspiler
 	{
 		Guard.IsNotNull(method);
 
-		return new(
-			method.IsStatic || (method.DeclaringType?.IsValueType ?? false) || forceNoCallvirt
-				? OpCodes.Call
-				: OpCodes.Callvirt, method);
+		return new(method.IsStatic || (method.DeclaringType?.IsValueType ?? false) || forceNoCallvirt
+			? OpCodes.Call
+			: OpCodes.Callvirt, method);
 	}
 
 	/// <summary>
@@ -1488,7 +1496,6 @@ public static class FishTranspiler
 			: ThrowHelper.ThrowArgumentException<Container>(
 				$"Type ({type}) for FishTranspiler.Box must be a ValueType.", nameof(type));
 	}
-	
 
 	/// <summary>
 	/// Converts the boxed representation of a value type to its unboxed form, pushing an address to the box object's
@@ -1983,9 +1990,9 @@ public static class FishTranspiler
 
 		return new(!type.IsPrimitive || type == typeof(char)
 			? ThrowHelper.ThrowArgumentException<OpCode>("Convert expects a non-character primitive type", nameof(type))
-			: ConvertOpCodesByType.TryGetValue(type, out var value) ? value
-			: ThrowHelper.ThrowArgumentException<OpCode>(
-				$"Type {type.FullDescription()} cannot be converted to"));
+			: ConvertOpCodesByType.TryGetValue(type, out var value)
+				? value
+				: ThrowHelper.ThrowArgumentException<OpCode>($"Type {type.FullDescription()} cannot be converted to"));
 	}
 
 	public static readonly Dictionary<Type, OpCode> ConvertOpCodesByType = new()
@@ -2034,12 +2041,13 @@ public static class FishTranspiler
 			: type == typeof(float)
 				? ThrowHelper.ThrowInvalidOperationException<OpCode>(
 					"There is no operation for converting to a float with overflow checking")
-			: type == typeof(double)
-				? ThrowHelper.ThrowInvalidOperationException<OpCode>(
-					"There is no operation for converting to a double with overflow checking")
-			: ConvertWithOverflowCheckOpCodesByType.TryGetValue(type, out var value) ? value
-			: ThrowHelper.ThrowArgumentException<OpCode>(
-				$"Type {type.FullDescription()} cannot be converted to"));
+				: type == typeof(double)
+					? ThrowHelper.ThrowInvalidOperationException<OpCode>(
+						"There is no operation for converting to a double with overflow checking")
+					: ConvertWithOverflowCheckOpCodesByType.TryGetValue(type, out var value)
+						? value
+						: ThrowHelper.ThrowArgumentException<OpCode>(
+							$"Type {type.FullDescription()} cannot be converted to"));
 	}
 
 	public static readonly Dictionary<Type, OpCode> ConvertWithOverflowCheckOpCodesByType = new()
@@ -2081,12 +2089,13 @@ public static class FishTranspiler
 			: type == typeof(float)
 				? ThrowHelper.ThrowInvalidOperationException<OpCode>(
 					"There is no operation for converting to a float with overflow checking")
-			: type == typeof(double)
-				? ThrowHelper.ThrowInvalidOperationException<OpCode>(
-					"There is no operation for converting to a double with overflow checking")
-			: ConvertUnsignedWithOverflowCheckOpCodesByType.TryGetValue(type, out var value) ? value
-			: ThrowHelper.ThrowArgumentException<OpCode>(
-				$"Type {type.FullDescription()} cannot be converted to"));
+				: type == typeof(double)
+					? ThrowHelper.ThrowInvalidOperationException<OpCode>(
+						"There is no operation for converting to a double with overflow checking")
+					: ConvertUnsignedWithOverflowCheckOpCodesByType.TryGetValue(type, out var value)
+						? value
+						: ThrowHelper.ThrowArgumentException<OpCode>(
+							$"Type {type.FullDescription()} cannot be converted to"));
 	}
 
 	public static readonly Dictionary<Type, OpCode> ConvertUnsignedWithOverflowCheckOpCodesByType = new()
@@ -2191,8 +2200,8 @@ public static class FishTranspiler
 		}
 	}
 
-	public static CodeInstructions MethodReplacer<T, V>(this CodeInstructions instructions, T from, V to,
-		bool throwOnFailure = true) where T : Delegate where V : Delegate
+	public static CodeInstructions MethodReplacer<TFrom, TTo>(this CodeInstructions instructions, TFrom from, TTo to,
+		bool throwOnFailure = true) where TFrom : Delegate where TTo : Delegate
 	{
 		Guard.IsNotNull(instructions);
 		Guard.IsNotNull(from);
@@ -2333,10 +2342,9 @@ public static class FishTranspiler
 
 		if (throwOnFailure && !success)
 		{
-			ThrowHelper.ThrowInvalidOperationException(
-				$"FishTranspiler.Replace couldn't find target instruction for {
-					predicate.Method.FullDescription()} of {UtilityF.GetCallingAssembly().GetName().Name}, Version {
-						UtilityF.GetCallingAssembly().GetName().Version}");
+			ThrowHelper.ThrowInvalidOperationException($"FishTranspiler.Replace couldn't find target instruction for {
+				predicate.Method.FullDescription()} of {UtilityF.GetCallingAssembly().GetName().Name}, Version {
+					UtilityF.GetCallingAssembly().GetName().Version}");
 		}
 	}
 
@@ -2377,9 +2385,8 @@ public static class FishTranspiler
 
 		if (throwOnFailure && !success)
 		{
-			ThrowHelper.ThrowInvalidOperationException(
-				$"FishTranspiler.ReplaceAt couldn't find target instruction for {
-					position.Method.FullDescription()} of {UtilityF.GetCallingAssembly().GetName().Name}, Version {
+			ThrowHelper.ThrowInvalidOperationException($"FishTranspiler.ReplaceAt couldn't find target instruction for {
+				position.Method.FullDescription()} of {UtilityF.GetCallingAssembly().GetName().Name}, Version {
 					UtilityF.GetCallingAssembly().GetName().Version}");
 		}
 
@@ -2406,8 +2413,13 @@ public static class FishTranspiler
 		return instruction;
 	}
 
-	public static bool LoadsLocalVariable(this OpCode opcode)
-		=> CodeInstructionExtensions.loadVarCodes.Contains(opcode);
+	public static bool LoadsLocalVariable(this OpCode opcode) => LoadLocalVariableOpCodes.Contains(opcode);
+
+	public static readonly HashSet<OpCode> LoadLocalVariableOpCodes =
+	[
+		OpCodes.Ldloca_S, OpCodes.Ldloca, OpCodes.Ldloc_0, OpCodes.Ldloc_1, OpCodes.Ldloc_2, OpCodes.Ldloc_3,
+		OpCodes.Ldloc_S, OpCodes.Ldloc
+	];
 
 	public static OpCode ToLoadLocalVariable(this OpCode opcode)
 		=> opcode.LoadsLocalVariable() && opcode != OpCodes.Ldarga && opcode != OpCodes.Ldarga_S ? opcode
@@ -2416,8 +2428,12 @@ public static class FishTranspiler
 			: opcode == OpCodes.Stloc ? OpCodes.Ldloc
 			: ThrowHelper.ThrowInvalidOperationException<OpCode>($"{opcode} cannot be cast to Ldloc.");
 
-	public static bool StoresLocalVariable(this OpCode opcode)
-		=> CodeInstructionExtensions.storeVarCodes.Contains(opcode);
+	public static bool StoresLocalVariable(this OpCode opcode) => StoreLocalVariableOpCodes.Contains(opcode);
+
+	public static readonly HashSet<OpCode> StoreLocalVariableOpCodes =
+	[
+		OpCodes.Stloc_0, OpCodes.Stloc_1, OpCodes.Stloc_2, OpCodes.Stloc_3, OpCodes.Stloc_S, OpCodes.Stloc
+	];
 
 	public static OpCode ToStoreLocalVariable(this OpCode opcode)
 		=> opcode.StoresLocalVariable() ? opcode
@@ -2498,9 +2514,16 @@ public static class FishTranspiler
 
 	public static bool LoadsString(this OpCode opcode) => opcode == OpCodes.Ldstr;
 
-	public static bool Branches(this OpCode opcode)
-		=> CodeInstructionExtensions.branchCodes.Contains(opcode)
-			|| opcode == OpCodes.Switch;
+	public static bool Branches(this OpCode opcode) => BranchingOpCodes.Contains(opcode);
+
+	public static readonly HashSet<OpCode> BranchingOpCodes =
+	[
+		OpCodes.Br_S, OpCodes.Brfalse_S, OpCodes.Brtrue_S, OpCodes.Beq_S, OpCodes.Bge_S, OpCodes.Bgt_S,
+		OpCodes.Ble_S, OpCodes.Blt_S, OpCodes.Bne_Un_S, OpCodes.Bge_Un_S, OpCodes.Bgt_Un_S, OpCodes.Ble_Un_S,
+		OpCodes.Blt_Un_S, OpCodes.Br, OpCodes.Brfalse, OpCodes.Brtrue, OpCodes.Beq, OpCodes.Bge, OpCodes.Bgt,
+		OpCodes.Ble, OpCodes.Blt, OpCodes.Bne_Un, OpCodes.Bge_Un, OpCodes.Bgt_Un, OpCodes.Ble_Un, OpCodes.Blt_Un,
+		OpCodes.Switch
+	];
 
 	public static bool Compares(this OpCode opcode) => CompareOpCodes.Contains(opcode);
 
@@ -2647,26 +2670,26 @@ public static class FishTranspiler
 	{
 		{ OpCodes.Ldarg_0, 0 },
 		{ OpCodes.Ldarg_1, 1 },
-        { OpCodes.Ldarg_2, 2 },
-        { OpCodes.Ldarg_3, 3 },
-        { OpCodes.Ldloc_0, 0 },
-        { OpCodes.Ldloc_1, 1 },
-        { OpCodes.Ldloc_2, 2 },
-        { OpCodes.Ldloc_3, 3 },
-        { OpCodes.Stloc_0, 0 },
-        { OpCodes.Stloc_1, 1 },
-        { OpCodes.Stloc_2, 2 },
-        { OpCodes.Stloc_3, 3 },
-        { OpCodes.Ldc_I4_0, 0 },
-        { OpCodes.Ldc_I4_1, 1 },
-        { OpCodes.Ldc_I4_2, 2 },
-        { OpCodes.Ldc_I4_3, 3 },
-        { OpCodes.Ldc_I4_4, 4 },
-        { OpCodes.Ldc_I4_5, 5 },
-        { OpCodes.Ldc_I4_6, 6 },
-        { OpCodes.Ldc_I4_7, 7 },
-        { OpCodes.Ldc_I4_8, 8 },
-        { OpCodes.Ldc_I4_M1, -1 }
+		{ OpCodes.Ldarg_2, 2 },
+		{ OpCodes.Ldarg_3, 3 },
+		{ OpCodes.Ldloc_0, 0 },
+		{ OpCodes.Ldloc_1, 1 },
+		{ OpCodes.Ldloc_2, 2 },
+		{ OpCodes.Ldloc_3, 3 },
+		{ OpCodes.Stloc_0, 0 },
+		{ OpCodes.Stloc_1, 1 },
+		{ OpCodes.Stloc_2, 2 },
+		{ OpCodes.Stloc_3, 3 },
+		{ OpCodes.Ldc_I4_0, 0 },
+		{ OpCodes.Ldc_I4_1, 1 },
+		{ OpCodes.Ldc_I4_2, 2 },
+		{ OpCodes.Ldc_I4_3, 3 },
+		{ OpCodes.Ldc_I4_4, 4 },
+		{ OpCodes.Ldc_I4_5, 5 },
+		{ OpCodes.Ldc_I4_6, 6 },
+		{ OpCodes.Ldc_I4_7, 7 },
+		{ OpCodes.Ldc_I4_8, 8 },
+		{ OpCodes.Ldc_I4_M1, -1 }
 	};
 
 	public static object? GetOperandFromIndex(int index) => index > 3 ? index : null;
@@ -2686,7 +2709,7 @@ public static class FishTranspiler
 		var methodBody = method.GetMethodBody();
 		if (methodBody is null)
 			ThrowHelper.ThrowArgumentException($"Method {method.FullDescription()} has no body.");
-		
+
 		return methodBody.LocalVariables;
 	}
 

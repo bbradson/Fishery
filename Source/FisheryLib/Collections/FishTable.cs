@@ -7,15 +7,22 @@
 // which itself is based on
 // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
 
+#if V1_2
+extern alias nuget;
+#endif
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security;
+using FisheryLib.Collections.Internal;
 using FisheryLib.FunctionPointers;
 using FisheryLib.Pools;
 using FisheryLib.Utility;
-using JetBrains.Annotations;
+#if V1_2
+using CollectionAccessType = nuget::JetBrains.Annotations.CollectionAccessType;
+using CollectionAccessAttribute = nuget::JetBrains.Annotations.CollectionAccessAttribute;
+#endif
 
 namespace FisheryLib.Collections;
 
@@ -45,6 +52,8 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		_version;
 
 	private float _maxLoadFactor = 0.5f;
+
+	private Entry _defaultEntry = Entry.Default;
 	
 	public KeyCollection Keys => new(this);
 
@@ -64,6 +73,15 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 	}
 
 	public bool IsReadOnly => false;
+
+	/// <summary>
+	/// Empty FishTables have their entries set to a default value, causing fishTable.ContainsKey(DefaultKey) to return
+	/// true. This property can be used for a check against this default, similar to a null. Unless set to a different
+	/// default through the FishTable constructor, for most reference types, the returned value is a static invalid
+	/// reference. Reference types implementing IEquatable or overriding Equals have null as default instead. Primitives
+	/// have all their bytes set to sbyte.MaxValue. Structs have their contents set according to previous rules.
+	/// </summary>
+	public TKey DefaultKey => _defaultEntry.Key;
 
 	public unsafe uint SizeEstimate
 		=> GetType().ComputeManagedObjectSizeEstimate()
@@ -227,6 +245,19 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 
 	public FishTable(int minimumCapacity) => Initialize(minimumCapacity);
 
+	/// <summary>
+	/// Initialize a new FishTable
+	/// </summary>
+	/// <param name="minimumCapacity">The minimum capacity of the backing array</param>
+	/// <param name="defaultKey">
+	/// The default key for empty entries. ContainsKey() returns true for this when empty
+	/// </param>
+	public FishTable(int minimumCapacity, TKey defaultKey)
+	{
+		_defaultEntry.Key = defaultKey;
+		Initialize(minimumCapacity);
+	}
+
 	[MemberNotNull(nameof(_buckets))]
 	[MemberNotNull(nameof(_tails))]
 	private void Initialize(int minimumCapacity = 0)
@@ -235,6 +266,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 			// Mathf.NextPowerOfTwo(minimumCapacity);
 		
 		_buckets = new Entry[minimumCapacity];
+		Array.Fill(_buckets, _defaultEntry);
 		_tails = new((uint)minimumCapacity);
 		_bucketBitShift = 32 - FishMath.TrailingZeroCount((uint)_buckets.Length);
 		_wrapAroundMask = _buckets.Length - 1;
@@ -280,7 +312,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 
 	private void SetBucketEmpty(int index)
 	{
-		_buckets[index] = default;
+		_buckets[index] = _defaultEntry;
 		_tails.SetEmpty(index);
 	}
 
@@ -400,8 +432,11 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 	{
 		ref var bucket = ref buckets[bucketIndex];
 
-		if (!_keyEqualityComparer(bucket.Key, default))
+		if (!CompareBytes(bucket.Key, _defaultEntry.Key)
+			&& !_keyEqualityComparer(bucket.Key, _defaultEntry.Key))
+		{
 			ThrowHelper.ThrowEmptyBucketKeyInvalidOperationException(bucketIndex, bucket);
+		}
 
 		if (bucket.Value.Equals<TValue>(default))
 			return true;
@@ -410,6 +445,43 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		tails.SetSolo(bucketIndex);
 		OnEntryAdded(bucket.AsKeyValuePair());	// technically late, but it's an edge case and there's
 		return false;							// no good workaround without performance hit
+	}
+
+	private static unsafe bool CompareBytes(TKey a, TKey b)
+	{
+		var size = sizeof(TKey);
+		var iOffset = 0;
+		var i = 0;
+		do
+		{
+			var currentA = *((nint*)&a + iOffset);
+			var currentB = *((nint*)&b + iOffset);
+
+			if (size - i >= sizeof(nint))
+			{
+				if (currentA != currentB)
+					return false;
+
+				iOffset++;
+				i += sizeof(nint);
+			}
+			else
+			{
+				var remainingSize = size & sizeof(nint);
+				i = 0;
+				do
+				{
+					if ((byte)(currentA >> i) != (byte)(currentB >> i))
+						return false;
+				}
+				while (++i < remainingSize);
+
+				break;
+			}
+		}
+		while (i < size);
+
+		return size != 0;
 	}
 
 	private bool TryFindTailIndexAndReplace(in Entry entry, ref int bucketIndex, ReplaceBehaviour replaceBehaviour)
@@ -498,7 +570,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		{
 			ref var tailingBucket = ref _buckets[tailIndex];
 			tailingEntriesList.Add(tailingBucket);
-			tailingBucket = default;
+			tailingBucket = _defaultEntry;
 
 			if (HasTail(tailIndex))
 			{
@@ -585,6 +657,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 
 		_tails = new((uint)newSize);
 		_buckets = new Entry[newSize];
+		Array.Fill(_buckets, _defaultEntry);
 
 		_bucketBitShift = 32 - FishMath.TrailingZeroCount((uint)newSize);
 		_wrapAroundMask = _buckets.Length - 1;
@@ -1046,7 +1119,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 	private void EmplaceWithTailsBackward(int entryIndex)
 	{
 		if (IsBucketEmpty(entryIndex))
-			Utility.Diagnostics.ThrowHelper.ThrowInvalidOperationException("Tried to emplace entry bucket");
+			Utility.Diagnostics.ThrowHelper.ThrowInvalidOperationException("Tried to emplace empty bucket");
 		
 		while (true)
 		{
@@ -1225,7 +1298,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		if (_buckets is null)
 			Initialize();
 		
-		Array.Clear(_buckets, 0, _buckets.Length);
+		Array.Fill(_buckets, _defaultEntry);
 		_tails.Reset();
 		
 		_count = 0;
@@ -1360,6 +1433,8 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 				.Append<TValue>(Value)
 				.Append(" }").ToString();
 		}
+
+		public static readonly Entry Default = new(KeyUtility<TKey>.Default, default);
 	}
 
 	internal struct Tails(uint length)
@@ -1688,11 +1763,11 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		internal static void ThrowKeyNotFoundException<T>(T key)
 		{
 			Guard.IsNotNull(key);
-			ThrowKeyNotFoundException((object)key);
+			ThrowKeyNotFoundException((object?)key);
 		}
 
 		[DoesNotReturn]
-		private static void ThrowKeyNotFoundException(object key)
+		private static void ThrowKeyNotFoundException(object? key)
 			=> throw new KeyNotFoundException($"The given key '{key}' was not present in the dictionary.");
 
 		[DoesNotReturn]
@@ -1715,7 +1790,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		internal static bool ThrowAddingDuplicateWithKeyArgumentException<T>(T key)
 		{
 			Guard.IsNotNull(key);
-			ThrowAddingDuplicateWithKeyArgumentException((object)key);
+			ThrowAddingDuplicateWithKeyArgumentException((object?)key);
 			return true;
 		}
 		
@@ -1782,7 +1857,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		}
 
 		[DoesNotReturn]
-		private static void ThrowAddingDuplicateWithKeyArgumentException(object key)
+		private static void ThrowAddingDuplicateWithKeyArgumentException(object? key)
 			=> throw new ArgumentException($"An item with the same key has already been added. Key: {key}");
 	}
 }

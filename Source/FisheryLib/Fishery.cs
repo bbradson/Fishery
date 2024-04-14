@@ -10,11 +10,12 @@ global using System.Collections.Generic;
 global using System.Reflection;
 global using HarmonyLib;
 global using FisheryLib.Utility.Diagnostics;
+global using JetBrains.Annotations;
 global using CodeInstructions = System.Collections.Generic.IEnumerable<HarmonyLib.CodeInstruction>;
+global using NotNullAttribute = System.Diagnostics.CodeAnalysis.NotNullAttribute;
 using System.Security;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using JetBrains.Annotations;
 
 [assembly: AllowPartiallyTrustedCallers]
 [assembly: SecurityRules(SecurityRuleSet.Level2, SkipVerificationInFullTrust = true)]
@@ -28,11 +29,11 @@ namespace FisheryLib;
 [PublicAPI]
 public static class FisheryLib
 {
-	public const decimal VERSION = 0.5M;
+	public const decimal VERSION = 0.51M;
 
 	public static decimal CurrentlyLoadedVersion { get; } = VERSION;
 
-	public const string VERSION_STRING = "0.5.0.0";
+	public const string VERSION_STRING = "0.5.1.0";
 
 	// public static string GetVersion()
 	// {

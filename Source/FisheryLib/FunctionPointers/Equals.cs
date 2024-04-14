@@ -7,7 +7,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Security;
-using JetBrains.Annotations;
 
 namespace FisheryLib.FunctionPointers;
 

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutDir>..\..\1.2\Assemblies\</OutDir>
+		<Copyright>Copyright (c) 2024 Bradson</Copyright>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+		<DefineConstants>DEBUG;V1_2</DefineConstants>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+		<DefineConstants>V1_2</DefineConstants>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Krafs.Rimworld.Ref" Version="1.2.*" />
+		<PackageReference Include="Lib.Harmony" Version="2.2.*" ExcludeAssets="runtime" />
+		<PackageReference Include="JetBrains.Annotations" Version="2023.*" Aliases="nuget" ExcludeAssets="runtime" />
+	</ItemGroup>
+</Project>

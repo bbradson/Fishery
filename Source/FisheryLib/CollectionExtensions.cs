@@ -9,7 +9,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using FisheryLib.Collections;
-using JetBrains.Annotations;
 
 namespace FisheryLib;
 
@@ -77,8 +76,8 @@ public static class CollectionExtensions
 		return array;
 	}
 
-	public static Telement[] ToArray<Tenumerable, Telement>(this Tenumerable enumerable, Telement[] destination)
-		where Tenumerable : IList<Telement>
+	public static TElement[] ToArray<TEnumerable, TElement>(this TEnumerable enumerable, TElement[] destination)
+		where TEnumerable : IList<TElement>
 	{
 		Guard.IsNotNull(destination);
 
@@ -112,9 +111,9 @@ public static class CollectionExtensions
 		}
 	}
 
-	public static void Fill<Telement, Tcollection>(this Telement[] array, Tcollection collection, int startIndex = 0,
+	public static void Fill<TElement, TCollection>(this TElement[] array, TCollection collection, int startIndex = 0,
 		int count = -1)
-		where Tcollection : IList<Telement>
+		where TCollection : IList<TElement>
 	{
 		Guard.IsNotNull(collection);
 
@@ -269,13 +268,13 @@ public static class CollectionExtensions
 
 		return default;
 	}
-	
+
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static ref TValue GetOrAddReference<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key)
 		where TValue : new()
 	{
 		var keyCode = HashCode.Get(key) & int.MaxValue;
-		
+
 	StartOfLookup:
 		if (dictionary.buckets != null)
 		{
@@ -293,7 +292,7 @@ public static class CollectionExtensions
 		dictionary.Add(key, Reflection.New<TValue>());
 		goto StartOfLookup;
 	}
-	
+
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static ref TValue GetOrAddReference<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, ref TKey key)
 		where TValue : new()
@@ -345,7 +344,7 @@ public static class CollectionExtensions
 	// 	dictionary.Add(key, Reflection.New<TValue>());
 	// 	goto StartOfLookup;
 	// }
-	
+
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static TValue GetOrAdd<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key)
 		where TValue : new()
@@ -369,7 +368,7 @@ public static class CollectionExtensions
 		dictionary.Add(key, Reflection.New<TValue>());
 		goto StartOfLookup;
 	}
-	
+
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static TValue GetOrAdd<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, ref TKey key)
 		where TValue : new()
@@ -393,7 +392,7 @@ public static class CollectionExtensions
 		dictionary.Add(key, Reflection.New<TValue>());
 		goto StartOfLookup;
 	}
-	
+
 	public static bool TryGetOrAddValue<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key,
 		out TValue value)
 	{
@@ -431,10 +430,10 @@ public static class CollectionExtensions
 		var entries = dictionary.entries;
 		if (entries is null)
 			return 0;
-		
+
 		var removedCount = 0;
 		var entriesCount = entries.Length;
-		
+
 		for (var i = 0; i < entriesCount; i++)
 		{
 			ref var entry = ref entries[i];
@@ -442,8 +441,8 @@ public static class CollectionExtensions
 				continue;
 
 			// predicate might modify collection, turning a ref invalid
-			var keyValuePair = new KeyValuePair<TKey,TValue>(entry.key, entry.value);
-			
+			var keyValuePair = new KeyValuePair<TKey, TValue>(entry.key, entry.value);
+
 			if (!predicate(keyValuePair))
 				continue;
 
@@ -468,7 +467,7 @@ public static class CollectionExtensions
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static ref int Version<T>(this List<T> list) => ref list._version;
-	
+
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static void AddRangeFast<T>(this List<T> list, List<T> range)
 	{
@@ -486,11 +485,11 @@ public static class CollectionExtensions
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static void UnsafeCopyTo<T>(this List<T> source, List<T> destination, int destinationStartIndex)
 		=> UnsafeBlockCopy(ref source._items[0], ref destination._items[destinationStartIndex], source._size);
-	
+
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static void UnsafeCopyTo<T>(this T[] source, T[] destination, int destinationStartIndex)
 		=> UnsafeBlockCopy(ref source[0], ref destination[destinationStartIndex], source.Length);
-	
+
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static unsafe void UnsafeBlockCopy<T>(ref T source, ref T destination, int count)
 		=> Unsafe.CopyBlock(ref Unsafe.As<T, byte>(ref destination),
@@ -513,7 +512,7 @@ public static class CollectionExtensions
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static ReadOnlySpan<T> AsReadOnlySpan<T>(this List<T> list) => new(list._items, 0, list._size);
-	
+
 	public static void ReplaceContentsWith<T>(this List<T> list, [AllowNull] List<T> collection)
 	{
 		if (ReferenceEquals(list, collection))
@@ -531,7 +530,7 @@ public static class CollectionExtensions
 		{
 			if (collectionCount < list._size)
 				list.RemoveRange(collectionCount, list._size - collectionCount);
-			
+
 			collection.UnsafeCopyTo(list, 0);
 		}
 		else
@@ -544,11 +543,12 @@ public static class CollectionExtensions
 		list._version++;
 	}
 
-	public static void ReplaceContentsWith<T, V>(this List<T> list, [AllowNull] V collection) where V : ICollection<T>
+	public static void ReplaceContentsWith<TThis, TOther>(this List<TThis> list, [AllowNull] TOther collection)
+		where TOther : ICollection<TThis>
 	{
-		if (typeof(V) == typeof(List<T>))
-			list.ReplaceContentsWith(Unsafe.As<List<T>>(collection));
-		
+		if (typeof(TOther) == typeof(List<TThis>))
+			list.ReplaceContentsWith(Unsafe.As<List<TThis>>(collection));
+
 		if (ReferenceEquals(list, collection))
 			return;
 
@@ -568,7 +568,7 @@ public static class CollectionExtensions
 		}
 		else
 		{
-			list._items = new T[collectionCount];
+			list._items = new TThis[collectionCount];
 			collection.CopyTo(list._items, 0);
 			list._size = collectionCount;
 		}
@@ -598,7 +598,7 @@ public static class CollectionExtensions
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static void Clear<T>(this T[] array) => Array.Clear(array, 0, array.Length);
-	
+
 	// public static List<T> Copy<T>(this List<T> source)
 	// {
 	// 	Guard.IsNotNull(source);
@@ -618,30 +618,30 @@ public static class CollectionExtensions
 	// 	
 	// 	return destination;
 	// }
-	
+
 	public static unsafe List<T> Copy<T>(this List<T> source)
 	{
 		Guard.IsNotNull(source);
-		
+
 		var destination = new List<T>(source._size);
 
 		if (source._size == 0)
 			return destination;
-		
+
 		fixed (void* destinationPointer = &destination._items[0], sourcePointer = &source._items[0])
 			Unsafe.CopyBlock(destinationPointer, sourcePointer, (uint)(source._size * sizeof(T)));
 
 		destination._size = source._size;
-		
+
 		return destination;
 	}
-	
+
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static void AddRangeFast<T>(this List<T> list, T[] range)
 	{
 		Guard.IsNotNull(list);
 		Guard.IsNotNull(range);
-		
+
 		if (range.Length < 1)
 			return;
 
@@ -651,13 +651,13 @@ public static class CollectionExtensions
 		list._size += range.Length;
 		list._version++;
 	}
-	
+
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static void Add(this List<char> list, string value)
 	{
 		Guard.IsNotNull(list);
 		Guard.IsNotNull(value);
-		
+
 		if (value.Length < 1)
 			return;
 
@@ -702,7 +702,7 @@ public static class CollectionExtensions
 		=> GetListExtensionMethods(type).AddRange(list, collection);
 
 	public static Array TryToArray(this IList list, Type type) => GetListExtensionMethods(type).ToArray(list);
-	
+
 	public static void RemoveAtFastUnordered<T>(this List<T> list, int index)
 	{
 		ref var lastBucket = ref list._items[list._size - 1];
@@ -710,33 +710,33 @@ public static class CollectionExtensions
 		lastBucket = default!;
 		list._size--;
 	}
-	
+
 	public static bool RemoveFastUnordered<T>(this List<T> list, T item)
 	{
 		var index = list.IndexOf(item);
 		if (index < 0)
 			return false;
-		
+
 		list.RemoveAtFastUnordered(index);
 		return true;
 	}
 
 	public static void InsertFastUnordered<T>(this List<T> list, int index, T item)
 	{
-		if ((uint) index > (uint) list._size)
+		if ((uint)index > (uint)list._size)
 			ThrowHelper.ThrowArgumentOutOfRangeException();
-		
+
 		if (list._size == list._items.Length)
 			list.EnsureCapacity(list._size + 1);
 
 		ref var targetBucket = ref list._items[index];
-		
+
 		list._items[list._size] = targetBucket;
 		targetBucket = item;
 		list._size++;
 		list._version++;
 	}
-	
+
 	public static unsafe uint GetSizeEstimate<TKey, TValue>(this Dictionary<TKey, TValue> dictionary)
 		=> dictionary.GetType().ComputeManagedObjectSizeEstimate()
 			+ ((uint)sizeof(Dictionary<TKey, TValue>.Entry) * (uint)(dictionary.entries?.Length ?? 0))

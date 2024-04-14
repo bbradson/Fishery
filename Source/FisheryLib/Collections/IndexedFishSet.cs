@@ -5,7 +5,6 @@
 
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
-using JetBrains.Annotations;
 
 namespace FisheryLib.Collections;
 

@@ -4,7 +4,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using System.Diagnostics.CodeAnalysis;
-using JetBrains.Annotations;
 using Mono.Cecil;
 using Mono.Collections.Generic;
 

@@ -5,7 +5,6 @@
 // https://github.com/CommunityToolkit/dotnet/blob/main/CommunityToolkit.HighPerformance/Extensions/BoolExtensions.cs
 
 using System.Runtime.CompilerServices;
-using JetBrains.Annotations;
 
 namespace FisheryLib;
 
