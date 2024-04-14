@@ -618,7 +618,7 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		if (_buckets is null)
 			Initialize();
 		
-		Array.Fill(_buckets, Internal.KeyUtility<T>.Default);
+		Array.Fill(_buckets, _defaultValue);
 		_tails.Reset();
 		
 		_count = 0;
