@@ -636,23 +636,30 @@ public static class CollectionExtensions
 		return destination;
 	}
 
-	public static unsafe void Fill<T>(this T[] array, T value)
+	public static void Fill<T>(this T[] array, T value)
 	{
 		Guard.IsNotNull(array);
+		
+		var i = array.Length - 1;
 
-		if (array.Length == 0)
+		if (i < 0)
 			return;
-
-		fixed (T* startAddress = &array[0])
+		
+		do
 		{
-			var i = array.Length - 1;
-			do
-			{
-				startAddress[i] = value;
-			}
-			while (--i >= 0);
+			array.UnsafeStore(i, value);
 		}
+		while (--i >= 0);
 	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static T UnsafeLoad<T>(this T[] array, int index) => Array.UnsafeLoad(array, index);
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static void UnsafeStore<T>(this T[] array, int index, T value) => Array.UnsafeStore(array, index, value);
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static TTo UnsafeCast<TFrom, TTo>(this TFrom obj) => Array.UnsafeMov<TFrom, TTo>(obj);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static void AddRangeFast<T>(this List<T> list, T[] range)

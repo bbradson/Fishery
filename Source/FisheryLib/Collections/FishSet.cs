@@ -205,7 +205,11 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 	
 	private void SetBucketEmpty(int index)
 	{
-		_buckets[index] = _defaultValue;
+		var buckets = _buckets;
+		if (buckets.Length <= index)
+			ThrowHelper.ThrowInvalidOperationException_ConcurrentOperationsNotSupported();
+		
+		buckets.UnsafeStore(index, _defaultValue);
 		_tails.SetEmpty(index);
 	}
 
@@ -303,10 +307,10 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		return tailCount;
 	}
 
-	private bool IsBucketEmpty(int bucketIndex) => IsBucketEmpty(bucketIndex, _tails, _buckets);
+	private bool IsBucketEmpty(int bucketIndex) => IsBucketEmpty(bucketIndex, _tails);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static bool IsBucketEmpty(int bucketIndex, Tails tails, T?[] buckets) => tails.IsEmpty(bucketIndex);
+	private static bool IsBucketEmpty(int bucketIndex, Tails tails) => tails.IsEmpty(bucketIndex);
 
 	private bool TryFindTailIndexAndReplace(T entry, ref int bucketIndex, ReplaceBehaviour replaceBehaviour)
 	{
@@ -389,12 +393,15 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		var tailingEntries = new PooledIList<List<T>>();
 		var tailingEntriesList = tailingEntries.List;
 		var tailIndex = GetTailIndex(bucketIndex);
+		var buckets = _buckets;
 
 		while (true)
 		{
-			ref var tailingBucket = ref _buckets[tailIndex];
-			tailingEntriesList.Add(tailingBucket!);
-			tailingBucket = _defaultValue;
+			if (tailIndex >= buckets.Length)
+				ThrowHelper.ThrowInvalidOperationException_ConcurrentOperationsNotSupported();
+			
+			tailingEntriesList.Add(buckets.UnsafeLoad(tailIndex)!);
+			buckets.UnsafeStore(tailIndex, _defaultValue);
 
 			if (HasTail(tailIndex))
 			{
@@ -454,7 +461,7 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		
 		for (var i = 0; i < oldBuckets.Length; i++)
 		{
-			if (!IsBucketEmpty(i, oldTails, oldBuckets))
+			if (!IsBucketEmpty(i, oldTails))
 				InsertEntry(oldBuckets[i]!, ReplaceBehaviour.Throw, true);
 		}
 	}
@@ -801,6 +808,13 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		[DoesNotReturn]
 		internal static void ThrowInvalidOperationException_InvalidOperation_EnumOpCantHappen()
 			=> throw new InvalidOperationException("Enumeration has either not started or has already finished.");
+
+		[DoesNotReturn]
+		internal static void ThrowInvalidOperationException_ConcurrentOperationsNotSupported()
+			=> throw new InvalidOperationException(
+				"Operations that change non-concurrent collections must have exclusive access. A concurrent "
+				+ "update was performed on this collection and corrupted its state. The collection's state is no "
+				+ "longer correct.");
 
 		[DoesNotReturn]
 		internal static void ThrowWrongKeyTypeArgumentException(object? key)

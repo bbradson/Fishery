@@ -312,7 +312,11 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 
 	private void SetBucketEmpty(int index)
 	{
-		_buckets[index] = _defaultEntry;
+		var buckets = _buckets;
+		if (buckets.Length <= index)
+			ThrowHelper.ThrowInvalidOperationException_ConcurrentOperationsNotSupported();
+		
+		buckets.UnsafeStore(index, _defaultEntry);
 		_tails.SetEmpty(index);
 	}
 
@@ -565,12 +569,15 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		var tailingEntries = new PooledIList<List<Entry>>();
 		var tailingEntriesList = tailingEntries.List;
 		var tailIndex = GetTailIndex(bucketIndex);
+		var buckets = _buckets;
 
 		while (true)
 		{
-			ref var tailingBucket = ref _buckets[tailIndex];
-			tailingEntriesList.Add(tailingBucket);
-			tailingBucket = _defaultEntry;
+			if (tailIndex >= buckets.Length)
+				ThrowHelper.ThrowInvalidOperationException_ConcurrentOperationsNotSupported();
+			
+			tailingEntriesList.Add(buckets.UnsafeLoad(tailIndex));
+			buckets.UnsafeStore(tailIndex, _defaultEntry);
 
 			if (HasTail(tailIndex))
 			{
@@ -1758,6 +1765,13 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		[DoesNotReturn]
 		internal static void ThrowInvalidOperationException_InvalidOperation_EnumOpCantHappen()
 			=> throw new InvalidOperationException("Enumeration has either not started or has already finished.");
+
+		[DoesNotReturn]
+		internal static void ThrowInvalidOperationException_ConcurrentOperationsNotSupported()
+			=> throw new InvalidOperationException(
+				"Operations that change non-concurrent collections must have exclusive access. A concurrent "
+				+ "update was performed on this collection and corrupted its state. The collection's state is no "
+				+ "longer correct.");
 
 		[DoesNotReturn]
 		internal static void ThrowKeyNotFoundException<T>(T key)
