@@ -266,7 +266,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 			// Mathf.NextPowerOfTwo(minimumCapacity);
 		
 		_buckets = new Entry[minimumCapacity];
-		Array.Fill(_buckets, _defaultEntry);
+		_buckets.Fill(_defaultEntry);
 		_tails = new((uint)minimumCapacity);
 		_bucketBitShift = 32 - FishMath.TrailingZeroCount((uint)_buckets.Length);
 		_wrapAroundMask = _buckets.Length - 1;
@@ -657,7 +657,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 
 		_tails = new((uint)newSize);
 		_buckets = new Entry[newSize];
-		Array.Fill(_buckets, _defaultEntry);
+		_buckets.Fill(_defaultEntry);
 
 		_bucketBitShift = 32 - FishMath.TrailingZeroCount((uint)newSize);
 		_wrapAroundMask = _buckets.Length - 1;
@@ -1298,7 +1298,7 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		if (_buckets is null)
 			Initialize();
 		
-		Array.Fill(_buckets, _defaultEntry);
+		_buckets.Fill(_defaultEntry);
 		_tails.Reset();
 		
 		_count = 0;

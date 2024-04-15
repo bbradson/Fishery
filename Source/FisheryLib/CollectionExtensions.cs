@@ -636,6 +636,24 @@ public static class CollectionExtensions
 		return destination;
 	}
 
+	public static unsafe void Fill<T>(this T[] array, T value)
+	{
+		Guard.IsNotNull(array);
+
+		if (array.Length == 0)
+			return;
+
+		fixed (T* startAddress = &array[0])
+		{
+			var i = array.Length - 1;
+			do
+			{
+				startAddress[i] = value;
+			}
+			while (--i >= 0);
+		}
+	}
+
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static void AddRangeFast<T>(this List<T> list, T[] range)
 	{

@@ -157,7 +157,7 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 			// Mathf.NextPowerOfTwo(minimumCapacity);
 		
 		_buckets = new T?[minimumCapacity];
-		Array.Fill(_buckets, _defaultValue);
+		_buckets.Fill(_defaultValue);
 		_tails = new((uint)minimumCapacity);
 		_bucketBitShift = 32 - FishMath.TrailingZeroCount((uint)_buckets.Length);
 		_wrapAroundMask = _buckets.Length - 1;
@@ -447,7 +447,7 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 
 		_tails = new((uint)_buckets.Length << 1);
 		_buckets = new T?[_buckets.Length << 1];
-		Array.Fill(_buckets, _defaultValue);
+		_buckets.Fill(_defaultValue);
 
 		_bucketBitShift = 32 - FishMath.TrailingZeroCount((uint)_buckets.Length);
 		_wrapAroundMask = _buckets.Length - 1;
@@ -618,7 +618,7 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		if (_buckets is null)
 			Initialize();
 		
-		Array.Fill(_buckets, _defaultValue);
+		_buckets.Fill(_defaultValue);
 		_tails.Reset();
 		
 		_count = 0;
