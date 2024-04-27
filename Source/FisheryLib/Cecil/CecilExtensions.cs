@@ -10,6 +10,7 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
 using Mono.Collections.Generic;
+using MonoMod.Utils;
 using Verse;
 using CallSite = Mono.Cecil.CallSite;
 
@@ -99,6 +100,81 @@ public static class CecilExtensions
 		ilProcessor.Body.Variables.Add(variableDefinition);
 		return variableDefinition;
 	}
+
+	public static Collection<VariableDefinition> GetLocalVariables(this ILProcessor ilProcessor)
+		=> ilProcessor.Body.Variables;
+
+	public static VariableDefinition FirstLocalVariable(this ILProcessor ilProcessor, Type type)
+		=> ilProcessor.FirstLocalVariableOrDefault(type) ?? ThrowForNoMatchingLocalVariable(ilProcessor, type);
+
+	public static VariableDefinition? FirstLocalVariableOrDefault(this ILProcessor ilProcessor, Type type)
+	{
+		Guard.IsNotNull(ilProcessor);
+		Guard.IsNotNull(type);
+		
+		var variables = ilProcessor.GetLocalVariables();
+		for (var i = 0; i < variables.Count; i++)
+		{
+			if (variables[i].VariableType.Is(type))
+				return variables[i];
+		}
+
+		return null;
+	}
+
+	[DoesNotReturn]
+	private static VariableDefinition ThrowForNoMatchingLocalVariable(ILProcessor ilProcessor, Type type)
+		=> ThrowHelper.ThrowInvalidOperationException<VariableDefinition>(
+			$"No local variable of type '{type.FullName}' found in method '{ilProcessor.Body.Method.FullName}'.");
+
+	public static Collection<ParameterDefinition> GetParameters(this ILProcessor ilProcessor)
+		=> ilProcessor.Body.Method.Parameters;
+
+	public static ParameterDefinition GetParameter(this ILProcessor ilProcessor, string name)
+		=> ilProcessor.GetParameterOrDefault(name) ?? ThrowForNoMatchingParameter(ilProcessor, name);
+
+	public static ParameterDefinition? GetParameterOrDefault(this ILProcessor ilProcessor, string name)
+	{
+		Guard.IsNotNull(ilProcessor);
+		Guard.IsNotNull(name);
+		
+		var parameters = ilProcessor.GetParameters();
+		for (var i = 0; i < parameters.Count; i++)
+		{
+			if (parameters[i].Name == name)
+				return parameters[i];
+		}
+
+		return null;
+	}
+
+	[DoesNotReturn]
+	private static ParameterDefinition ThrowForNoMatchingParameter(ILProcessor ilProcessor, string name)
+		=> ThrowHelper.ThrowInvalidOperationException<ParameterDefinition>(
+			$"No parameter named '{name}' found in method '{ilProcessor.Body.Method.FullName}'.");
+
+	public static ParameterDefinition FirstParameter(this ILProcessor ilProcessor, Type type)
+		=> ilProcessor.FirstParameterOrDefault(type) ?? ThrowForNoMatchingParameter(ilProcessor, type);
+
+	public static ParameterDefinition? FirstParameterOrDefault(this ILProcessor ilProcessor, Type type)
+	{
+		Guard.IsNotNull(ilProcessor);
+		Guard.IsNotNull(type);
+		
+		var parameters = ilProcessor.GetParameters();
+		for (var i = 0; i < parameters.Count; i++)
+		{
+			if (parameters[i].ParameterType.Is(type))
+				return parameters[i];
+		}
+
+		return null;
+	}
+
+	[DoesNotReturn]
+	private static ParameterDefinition ThrowForNoMatchingParameter(ILProcessor ilProcessor, Type type)
+		=> ThrowHelper.ThrowInvalidOperationException<ParameterDefinition>(
+			$"No parameter of type '{type}' found in method '{ilProcessor.Body.Method.FullName}'.");
 
 	public static void InsertAt(this ILProcessor ilProcessor, int index, Instruction instruction)
 		=> ilProcessor.instructions.Insert(index, instruction);
@@ -349,23 +425,32 @@ public static class CecilExtensions
 				replacement.Name, replacement.GetParameters().GetTypes());
 		}
 
-		var newMethodReference = module.ImportReference(replacement);
-		var newBody = newMethodReference.Resolve().Body;
+		var replacementMethodReference = module.ImportReference(replacement);
+		var replacementBody = replacementMethodReference.Resolve().Body;
 		
-		newBody.SimplifyMacros();
-		MethodBodyRocks.ComputeOffsets(newBody);
+		replacementBody.SimplifyMacros();
+		MethodBodyRocks.ComputeOffsets(replacementBody);
+
+		var targetVariables = targetBody.Variables;
+		var replacementVariables = replacementBody.Variables;
+		targetVariables.Clear();
+		
+		foreach (var variable in replacementVariables)
+			targetVariables.Add(new(module.ImportReference(variable.VariableType, replacementMethodReference)));
 
 		var targetInstructions = targetBody.instructions;
 		targetInstructions.Clear();
-		
-		foreach (var instruction in newBody.instructions)
+
+		var replacementInstructions = replacementBody.instructions;
+		foreach (var instruction in replacementInstructions)
 		{
 			targetInstructions.Add(new(instruction.OpCode, instruction.Operand switch
 			{
-				FieldReference field => module.ImportReference(field, newMethodReference),
-				MethodReference method => module.ImportReference(method, newMethodReference),
-				TypeReference type => module.ImportReference(type, newMethodReference),
+				FieldReference field => module.ImportReference(field, replacementMethodReference),
+				MethodReference method => module.ImportReference(method, replacementMethodReference),
+				TypeReference type => module.ImportReference(type, replacementMethodReference),
 				ParameterReference parameter => targetBody.GetParameter(parameter.Index),
+				VariableDefinition variable => targetBody.GetVariable(replacementVariables.IndexOf(variable)),
 				_ => instruction.Operand
 			}));
 		}
@@ -378,34 +463,39 @@ public static class CecilExtensions
 				instruction.Operand = targetInstructions.First(ti => ti.Offset == operand.Offset);
 		}
 
-		targetBody.Variables.Clear();
-		foreach (var variable in newBody.Variables)
-			targetBody.Variables.Add(new(module.ImportReference(variable.VariableType, newMethodReference)));
-
-		targetBody.MaxStackSize = newBody.MaxStackSize;
+		targetBody.MaxStackSize = replacementBody.MaxStackSize;
 
 		targetBody.ExceptionHandlers.Clear();
-		foreach (var exceptionHandler in newBody.ExceptionHandlers)
+		foreach (var exceptionHandler in replacementBody.ExceptionHandlers)
 		{
 			var handler = new ExceptionHandler(exceptionHandler.HandlerType)
 			{
-				TryStart = exceptionHandler.TryStart,
-				TryEnd = exceptionHandler.TryEnd,
-				FilterStart = exceptionHandler.FilterStart,
-				HandlerStart = exceptionHandler.HandlerStart,
-				HandlerEnd = exceptionHandler.HandlerEnd
+				TryStart = FindInTarget(exceptionHandler.TryStart),
+				TryEnd = FindInTarget(exceptionHandler.TryEnd),
+				FilterStart = FindInTarget(exceptionHandler.FilterStart),
+				HandlerStart = FindInTarget(exceptionHandler.HandlerStart),
+				HandlerEnd = FindInTarget(exceptionHandler.HandlerEnd)
 			};
 
 			if (exceptionHandler.CatchType is { } catchType)
-				handler.CatchType = module.ImportReference(catchType, newMethodReference);
+				handler.CatchType = module.ImportReference(catchType, replacementMethodReference);
 			
 			targetBody.ExceptionHandlers.Add(handler);
 		}
 
-		targetBody.Method.ImplAttributes = newBody.Method.ImplAttributes;
+		targetBody.Method.ImplAttributes = replacementBody.Method.ImplAttributes;
 		
 		targetBody.OptimizeMacros();
-		newBody.OptimizeMacros();
+		replacementBody.OptimizeMacros();
+
+		Instruction? FindInTarget(Instruction? replacementInstruction)
+		{
+			if (replacementInstruction is null)
+				return replacementInstruction;
+			
+			var index = replacementInstructions.IndexOf(replacementInstruction);
+			return (uint)index > (uint)targetInstructions.Count ? replacementInstruction : targetInstructions[index];
+		}
 	}
 
 	public static MethodDefinition GetMethod(this ILProcessor ilProcessor) => ilProcessor.Body.Method;
