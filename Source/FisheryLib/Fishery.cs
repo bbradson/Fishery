@@ -29,11 +29,11 @@ namespace FisheryLib;
 [PublicAPI]
 public static class FisheryLib
 {
-	public const decimal VERSION = 0.6M;
+	public const decimal VERSION = 0.61M;
 
 	public static decimal CurrentlyLoadedVersion { get; } = VERSION;
 
-	public const string VERSION_STRING = "0.6";
+	public const string VERSION_STRING = "0.6.1";
 
 	// public static string GetVersion()
 	// {

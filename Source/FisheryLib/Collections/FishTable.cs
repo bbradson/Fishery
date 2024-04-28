@@ -258,6 +258,25 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		Initialize(minimumCapacity);
 	}
 
+	public unsafe FishTable(int minimumCapacity, delegate*<ref TKey, int> keyHashCodeByRefGetter = default,
+		delegate*<TKey?, int> keyHashCodeGetter = default,
+		delegate*<ref TKey, ref TKey, bool> keyEqualityByRefComparer = default,
+		delegate*<TKey?, TKey?, bool> keyEqualityComparer = default)
+	{
+		InitializeDelegates(keyHashCodeByRefGetter, keyHashCodeGetter, keyEqualityByRefComparer, keyEqualityComparer);
+		Initialize(minimumCapacity);
+	}
+
+	public unsafe FishTable(int minimumCapacity, TKey defaultKey,
+		delegate*<ref TKey, int> keyHashCodeByRefGetter = default, delegate*<TKey?, int> keyHashCodeGetter = default,
+		delegate*<ref TKey, ref TKey, bool> keyEqualityByRefComparer = default,
+		delegate*<TKey?, TKey?, bool> keyEqualityComparer = default)
+	{
+		_defaultEntry.Key = defaultKey;
+		InitializeDelegates(keyHashCodeByRefGetter, keyHashCodeGetter, keyEqualityByRefComparer, keyEqualityComparer);
+		Initialize(minimumCapacity);
+	}
+
 	[MemberNotNull(nameof(_buckets))]
 	[MemberNotNull(nameof(_tails))]
 	private void Initialize(int minimumCapacity = 0)
@@ -270,6 +289,23 @@ public class FishTable<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, I
 		_tails = new((uint)minimumCapacity);
 		_bucketBitShift = 32 - FishMath.TrailingZeroCount((uint)_buckets.Length);
 		_wrapAroundMask = _buckets.Length - 1;
+	}
+
+	private unsafe void InitializeDelegates(delegate*<ref TKey, int> keyHashCodeByRefGetter,
+		delegate*<TKey?, int> keyHashCodeGetter, delegate*<ref TKey, ref TKey, bool> keyEqualityByRefComparer,
+		delegate*<TKey?, TKey?, bool> keyEqualityComparer)
+	{
+		if (keyHashCodeByRefGetter != default)
+			_keyHashCodeByRefGetter = keyHashCodeByRefGetter;
+		
+		if (keyHashCodeGetter != default)
+			_keyHashCodeGetter = keyHashCodeGetter;
+		
+		if (keyEqualityByRefComparer != default)
+			_keyEqualityByRefComparer = keyEqualityByRefComparer;
+		
+		if (keyEqualityComparer != default)
+			_keyEqualityComparer = keyEqualityComparer;
 	}
 
 	public FishTable(IEnumerable<KeyValuePair<TKey, TValue>> entries) : this(0)

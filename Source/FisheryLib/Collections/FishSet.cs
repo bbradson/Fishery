@@ -149,6 +149,21 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		Initialize(minimumCapacity);
 	}
 
+	public unsafe FishSet(int minimumCapacity, delegate*<T?, int> hashCodeGetter = default,
+		delegate*<T?, T?, bool> equalityComparer = default)
+	{
+		InitializeDelegates(hashCodeGetter, equalityComparer);
+		Initialize(minimumCapacity);
+	}
+
+	public unsafe FishSet(int minimumCapacity, T defaultValue, delegate*<T?, int> hashCodeGetter = default,
+		delegate*<T?, T?, bool> equalityComparer = default)
+	{
+		_defaultValue = defaultValue;
+		InitializeDelegates(hashCodeGetter, equalityComparer);
+		Initialize(minimumCapacity);
+	}
+
 	[MemberNotNull(nameof(_buckets))]
 	[MemberNotNull(nameof(_tails))]
 	private void Initialize(int minimumCapacity = 0)
@@ -161,6 +176,15 @@ public class FishSet<T> : ISet<T>, IReadOnlyCollection<T>, ICollection
 		_tails = new((uint)minimumCapacity);
 		_bucketBitShift = 32 - FishMath.TrailingZeroCount((uint)_buckets.Length);
 		_wrapAroundMask = _buckets.Length - 1;
+	}
+
+	private unsafe void InitializeDelegates(delegate*<T?, int> hashCodeGetter, delegate*<T?, T?, bool> equalityComparer)
+	{
+		if (hashCodeGetter != default)
+			_hashCodeGetter = hashCodeGetter;
+		
+		if (equalityComparer != default)
+			_equalityComparer = equalityComparer;
 	}
 
 	public FishSet(IEnumerable<T> entries) : this(0)

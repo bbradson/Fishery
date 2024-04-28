@@ -5,6 +5,7 @@
 
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace FisheryLib.Collections;
 
@@ -17,10 +18,11 @@ namespace FisheryLib.Collections;
 public class IndexedFishSet<T> : IList<T>, IList, IReadOnlyList<T>
 {
 	private readonly List<T> _items = [];
-	private readonly FishTable<T, int> _indices = new();
+	private readonly FishTable<T, int> _indices;
 	
 	public T this[int index]
 	{
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		get => _items[index];
 		set
 		{
@@ -31,7 +33,23 @@ public class IndexedFishSet<T> : IList<T>, IList, IReadOnlyList<T>
 		}
 	}
 
-	public List<T> ReadOnlyList => _items;
+	public List<T> ReadOnlyList
+	{
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		get => _items;
+	}
+
+	public ReadOnlySpan<T> Span
+	{
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		get => _items.AsReadOnlySpan();
+	}
+
+	public IndexedFishSet() : this(static () => [])
+	{
+	}
+
+	public IndexedFishSet(Func<FishTable<T, int>> indicesInitializer) => _indices = indicesInitializer();
 
 	public List<T>.Enumerator GetEnumerator() => _items.GetEnumerator();
 
