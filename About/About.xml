@@ -16,6 +16,7 @@
 		<li>me.samboycoding.betterloading</li>
 	</loadBefore>
 	<loadAfter>
+		<li>zetrith.prepatcher</li>
 		<li>brrainz.harmony</li>
 	</loadAfter>
 	<modDependencies>
